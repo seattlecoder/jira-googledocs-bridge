@@ -56,7 +56,3 @@ error message:
 
 com.atlassian.jira.rpc.exception.RemotePermissionException: Remote custom fields
 can only be retrieved by an administrator.
-
-*SOAP (JIRA) authentication fails if username & password are read from files.
-(hardcoded username & password does not fail.)
-However, Google authentication has no problem with files.

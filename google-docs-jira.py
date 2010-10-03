@@ -4,7 +4,7 @@ import gdata.docs.data
 import gdata.docs.client
 import SOAPpy
 from xml.dom.minidom import parseString
-import argparse
+
 
 ### get folder uri
 def getFolderUri(folderName):
@@ -92,12 +92,12 @@ def updateContent(content):
 
   # read jira user name from file
   file = open('jira-username','r')
-  jira_username = file.read()
+  jira_username = file.readline().rstrip()
   file.close()
 
   # read jira password from file
   file = open('jira-passwd','r')
-  jira_passwd = file.read()
+  jira_passwd = file.readline().rstrip()
   file.close()
 
   auth = soap.login(jira_username, jira_passwd)
@@ -206,23 +206,21 @@ client.http_client.debug = False  # Set to True for debugging HTTP requests
 
 # read google email from file
 file = open('gmail','r')
-gmail = file.read()
+gmail = file.readline().rstrip()
 file.close()
 
 # read google password from file
 file = open('gpasswd','r')
-gpasswd = file.read()
+gpasswd = file.readline().rstrip()
 file.close()
 
 client.ClientLogin(gmail, gpasswd, client.source, 'writely')
 
-parser = argparse.ArgumentParser(description='run script with arguments')
-parser.add_argument
 
 #createDoc('file-edit')
 
 #downloadDoc('file-edit')
-#content = getContentFromFile('file-edit.tmp')
-#content = updateContent(content) # this is test
+content = getContentFromFile('file-edit.tmp')
+content = updateContent(content) # this is test
 #writeContent(content, 'file-view')
 #uploadDoc('file-view')
