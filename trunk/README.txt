@@ -48,18 +48,7 @@ FG-111 and FG-101 are replaced with actual issue data.
 The query 'summary ~ portal' is replaced with actual issues.
 
 
-Problems:
-
-*if the number (3rd argument of method getIssueFromJqlSearch()) is 10, it fails.
-
-error message:
-
-Traceback (most recent call last):
-  File "jira.py", line 219, in <module>
-    content = updateContent(content) # this is test
-  File "jira.py", line 157, in updateContent
-    duedate = issue.duedate[0:3]
-TypeError: 'NoneType' object is not subscriptable
+Current Problems:
 
 *method getCustomFields() call fails.
 
