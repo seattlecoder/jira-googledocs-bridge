@@ -4,7 +4,7 @@ import gdata.docs.data
 import gdata.docs.client
 import SOAPpy
 from xml.dom.minidom import parseString
-
+import argparse
 
 ### get folder uri
 def getFolderUri(folderName):
@@ -154,11 +154,15 @@ def updateContent(content):
           summary = issue.summary
           status = issue.status
           priority = issue.priority
-          duedate = issue.duedate[0:3]
+          if issue.duedate != None:
+            duedate = issue.duedate[0:3]
+          else:
+            duedate = '-      '
           #progress = issue.progress
           resolution = issue.resolution
           assignee = issue.assignee
 
+          # make summary multiple lines
           list = []
           list.append(summary[0:20])
           length = len(summary)
@@ -212,10 +216,13 @@ file.close()
 
 client.ClientLogin(gmail, gpasswd, client.source, 'writely')
 
+parser = argparse.ArgumentParser(description='run script with arguments')
+parser.add_argument
 
 #createDoc('file-edit')
+
 #downloadDoc('file-edit')
-content = getContentFromFile('file-edit.tmp')
-content = updateContent(content) # this is test
+#content = getContentFromFile('file-edit.tmp')
+#content = updateContent(content) # this is test
 #writeContent(content, 'file-view')
 #uploadDoc('file-view')
