@@ -2,6 +2,8 @@ copy texts from the 'test-edit' file to the 'myTest' file (not a file copy)
 (cmd-A -> cmd-C -> cmd-V)
 since I could not download the 'test-edit' file.
 It is to be able to test the format change during document download/upload.
+'myText' is the google doc format. downloaded in the html format and uploaded 
+it in the msword (content_type = 'application/msword') format.
 NOTE: after copying the texts: header, footer, comment, footnote, and 
       the 'Update now' button disappeared. 
       super/sub script position change - lined with normal texts
