@@ -1,0 +1,32 @@
+copy texts from the 'test-edit' file to the 'myTest' file (not a file copy)
+since I could not download the 'test-edit' file.
+It is to be able to test the format change during document download/upload.
+NOTE: after copying the texts: header, footer, comment, footnote, and 
+      the 'Update now' button disappeared. 
+      super/sub script position change - lined with normal texts
+
+
+download 'myTest' and upload it using the Python google docs list API.
+
+###########
+# changes #
+###########
+
+Heading       -> Normal text
+Arial         -> Times New Roman
+24pt          -> 12pt
+Bold          -> non-bold
+white spaces  -> gone
+before text
+space between -> wider
+text lines 
+space between -> wider
+horizontal
+lines
+table size    -> shrunken
+list item     -> numbered item
+underline     -> non-underline
+italic        -> non-italic
+strike        -> non-strike
+super sub     -> position moved (see above)
+indentation   -> gone
