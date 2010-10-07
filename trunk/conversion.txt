@@ -1,0 +1,22 @@
+document upload format conversion (web browser)
+
+
+checkbox 1: Convert documents, presentations, and spreadsheets to the 
+            corresponding Google Docs formats
+
+odt -> fail
+pdf -> succeed (foot note is not visible)
+rtf -> fail
+txt -> uploaded but error (format is not preserved)
+doc -> fail
+html(zipped) -> uploaded but error (same as txt)
+
+
+checkbox 2: Convert text from PDF or image files to Google Docs documents.
+
+odt -> succeed (no preview available)
+pdf -> succeed (foot note is not visible)
+rtf -> succeed (no preview available)
+txt -> succeed (no preview available)
+doc -> succeed (can view/not editable)
+html(zipped) -> succeed (no preview available)
