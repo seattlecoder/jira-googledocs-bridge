@@ -24,8 +24,8 @@ def getFolderUri(folderName):
 ## path: file path in the local machine
 ## file: file name
 def upload(path, file):
-  entry = client.Upload(media=path, title=file, folder_or_uri=getFolderUri('GoogleDocsJira'), content_type='application/msword')
-  #entry = client.Upload(media=path, title=file, content_type='application/msword')
+  #entry = client.Upload(media=path, title=file, folder_or_uri=getFolderUri('GoogleDocsJira'), content_type='application/msword')
+  entry = client.Upload(media=path, title=file, content_type='application/msword')
 
   print 'Document \'%s\' uploaded.' % file
 
@@ -157,6 +157,9 @@ def updateContent(contents):
 
   auth = soap.login(jira_username, jira_passwd)
   info = soap.getServerInfo(auth)
+  resolutions = soap.getResolutions(auth)
+  statuses = soap.getStatuses(auth)
+  priorities = soap.getPriorities(auth)
 
   keys = getKeyList(contents)
   queries = getQueryList(contents)
@@ -176,7 +179,7 @@ def updateContent(contents):
     #cf = soap.getCustomFields(auth)
     #print cf
 
-    format = '%3s %6s %11s %-20s %2s %2s %15s %2s %8s %10s'
+    #format = '%3s %6s %11s %-20s %2s %2s %15s %2s %8s %10s'
     #jiraIssueList = ' No    Key         WBS          Summary      S Pri    Duedate   % R  Assignee\n'
     jiraIssueList = "<table border='1' cellspacing='0'><tr><th>No.</th><th>Key</th><th>WBS</th><th>Summary</th><th>Status</th><th>Pri</th><th>Duedate</th><th>Prog.%</th><th>Res</th><th>Assignee</th></tr>"
     issueNum = 0
@@ -187,31 +190,34 @@ def updateContent(contents):
       no = str(issueNum)
       key = issue.key
       wbs = 'wbs'
+      summary = '-'
       if issue.summary != None:
         summary = issue.summary
-      else:
-        summary = '-'
+      status = '-'
       if issue.status != None:
-        status = issue.status
-      else:
-        status = '-'
+        for stat in statuses:
+          if stat.id == issue.status:
+            status = stat.name
+            break
+      priority = '-'
       if issue.priority != None:
-        priority = issue.priority
-      else:
-        priority = '-'
+        for pri in priorities:
+          if pri.id == issue.priority:
+            priority = pri.name
+            break
+      duedate = '-'
       if issue.duedate != None:
         duedate = issue.duedate[0:3]
-      else:
-        duedate = '-'
       #progress = issue.progress
+      resolution = 'UNRESOLVED'
       if issue.resolution != None:
-        resolution = issue.resolution
-      else:
-        resolution = '-'
+        for res in resolutions:
+          if res.id == issue.resolution:
+            resolution = res.name
+            break
+      assignee = '-'
       if issue.assignee != None:
-        assignee = issue.assignee
-      else:
-        assignee = '-'
+        assignee = soap.getUser(auth, issue.assignee)
 
       '''
       # make summary multiple lines
@@ -231,7 +237,8 @@ def updateContent(contents):
           jiraIssueList = jiraIssueList + format % ('', '', '', list[idx], '', '', '', '', '', '') + '\n'
           idx = idx + 1
       '''
-      jiraIssueList = jiraIssueList + '<tr><td>'+no+'</td><td><a href=\"'+info.baseUrl+'/browse/'+key+'\">'+key+'</a></td><td>'+wbs+'</td><td>'+summary+'</td><td>'+status+'</td><td><img src=\"$priorityicon\" alt=\"$priority\" /></td><td>'+str(duedate)+'</td><td>'+'</td><td>'+resolution+'</td><td>'+assignee+'</td></tr>'
+      #jiraIssueList = jiraIssueList + '<tr><td>'+no+'</td><td><a href=\"'+info.baseUrl+'/browse/'+key+'\">'+key+'</a></td><td>'+wbs+'</td><td>'+summary+'</td><td>'+status+'</td><td>'+priority+'</td><td>'+str(duedate)+'</td><td>'+'</td><td>'+resolution+'</td><td>'+assignee.fullname+'</td></tr>'
+      jiraIssueList = jiraIssueList + '<tr><td>'+no+'</td><td>'+key+'</a></td><td>'+wbs+'</td><td>'+summary+'</td><td>'+status+'</td><td>'+priority+'</td><td>'+str(duedate)+'</td><td>'+'</td><td>'+resolution+'</td><td>'+assignee.fullname+'</td></tr>'
 
     jiraIssueList = jiraIssueList + '</table>'
     contents = contents.replace(query, jiraIssueList)
