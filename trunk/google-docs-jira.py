@@ -140,6 +140,13 @@ def getQueryList(string):
 
   return queryList
 
+### find id
+def findId(list, id):
+  for e in list:
+    if e.id == id:
+      return e
+  return None
+
 ### test update content
 def updateContent(contents):
   # soap authentication
@@ -169,12 +176,22 @@ def updateContent(contents):
     issue = soap.getIssue(auth, issuekey)
 
     #print issue key
-    jiraIssue = issue.key+':'+issue.summary+' '+issue.priority+' '+issue.assignee+' Due:'+str(issue.duedate[0:3])
+    priority = '-'
+    if issue.priority != None:
+      pri = findId(priorities, issue.priority)
+      if pri != None:
+        priority = pri.name
+
+    assignee = '-'
+    if issue.assignee != None:
+      assignee = soap.getUser(auth, issue.assignee)
+
+    jiraIssue = issue.key+': '+issue.summary+' '+priority+' '+assignee.fullname+' Due:'+str(issue.duedate[0:3])
     contents = contents.replace(issuekey, jiraIssue)
 
   # get query
   for query in queries:
-    issues = soap.getIssuesFromJqlSearch(auth, query, 3)
+    issues = soap.getIssuesFromJqlSearch(auth, query, 5)
     #print issues
     #cf = soap.getCustomFields(auth)
     #print cf
@@ -195,26 +212,23 @@ def updateContent(contents):
         summary = issue.summary
       status = '-'
       if issue.status != None:
-        for stat in statuses:
-          if stat.id == issue.status:
-            status = stat.name
-            break
+        stat = findId(statuses, issue.status)
+        if stat != None:
+          status = stat.name
       priority = '-'
       if issue.priority != None:
-        for pri in priorities:
-          if pri.id == issue.priority:
-            priority = pri.name
-            break
+        pri = findId(priorities, issue.priority)
+        if pri != None:
+          priority = pri.name
       duedate = '-'
       if issue.duedate != None:
         duedate = issue.duedate[0:3]
       #progress = issue.progress
       resolution = 'UNRESOLVED'
       if issue.resolution != None:
-        for res in resolutions:
-          if res.id == issue.resolution:
-            resolution = res.name
-            break
+        res = findId(resolutions, issue.resolution)
+        if res != None:
+          resolution = res.name
       assignee = '-'
       if issue.assignee != None:
         assignee = soap.getUser(auth, issue.assignee)
@@ -242,6 +256,8 @@ def updateContent(contents):
 
     jiraIssueList = jiraIssueList + '</table>'
     contents = contents.replace(query, jiraIssueList)
+
+  contents = re.sub(r'&lt;jira&gt;|&lt;/jira&gt;|&lt;jiralist&gt;|&lt;/jiralist&gt;', '', contents)
 
   #print 'updated contents: '+contents
   print 'Contents updated.'
@@ -281,8 +297,8 @@ client.ClientLogin(gmail, gpasswd, client.source, 'writely')
 
 #createDoc('file-edit')
 
-#downloadDoc('myTest')
-content = getContentsFromFile('myTest.tmp')
+#downloadDoc('myTest.original')
+content = getContentsFromFile('myTest.original.tmp')
 content = updateContent(content) # this is test
-#writeContent(content, 'myTest-view')
-#uploadDoc('myTest-view')
+writeContent(content, 'myTest-view')
+uploadDoc('myTest-view')
