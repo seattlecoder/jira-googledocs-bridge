@@ -5,6 +5,8 @@ import gdata.docs.client
 import SOAPpy
 import re
 from xml.dom.minidom import parseString
+import argparse
+import sys
 
 
 ### get folder uri
@@ -23,17 +25,16 @@ def getFolderUri(folderName):
 ### upload
 ## path: file path in the local machine
 ## file: file name
-def upload(path, file):
-  #entry = client.Upload(media=path, title=file, folder_or_uri=getFolderUri('GoogleDocsJira'), content_type='application/msword')
-  entry = client.Upload(media=path, title=file, content_type='application/msword')
+def upload(path, file, folderName):
+  folder_uri = getFolderUri(folderName)
+  entry = client.Upload(media=path, title=file, folder_or_uri=folder_uri, content_type='application/msword')
 
   print 'Document \'%s\' uploaded.' % file
 
 ### download
 ## resourceid: google document id
 def download(resourceid):
-  file_ext = '.tmp'
-  print resourceid
+  #print resourceid
   entry = client.GetDoc(resourceid)
 
   # download with tmp extension
@@ -46,15 +47,15 @@ def download(resourceid):
 
 ### create a document with content and upload it to google docs
 ## fname: file name
-def createDoc(fname):
-  file = open(fname,'w')
-  file.write('<jira>FG-101</jira>')
-  file.close()
-
-  print 'Document \'%s\' created with contents.' % fname
-
-  fpath = fname
-  upload(fpath, fname)
+#def createDoc(fname):
+#  file = open(fname,'w')
+#  file.write('<jira>FG-101</jira>')
+#  file.close()
+#
+#  print 'Document \'%s\' created with contents.' % fname
+#
+#  fpath = fname
+#  upload(fpath, fname)
 
 ### get resource id by given doc title
 ## title: file name on the Google Docs server.
@@ -69,6 +70,10 @@ def getResourceId(title):
 ### download document by title (file name)
 def downloadDoc(title):
   resourceId = getResourceId(title)
+
+  if resourceId == None:
+    sys.exit('File \''+title+'\' does not exists.')
+
   download(resourceId)
 
 ### get content from html format
@@ -117,7 +122,6 @@ def getKeyList(string):
             keyList.append(issuekey)
 
   return keyList
-      
 
 ### get jira query from text contents
 def getQueryList(string):
@@ -148,7 +152,7 @@ def findId(list, id):
   return None
 
 ### test update content
-def updateContent(contents):
+def updateContent(contents, linkOption):
   # soap authentication
   soap = SOAPpy.WSDL.Proxy('http://jira.futuregrid.org/rpc/soap/jirasoapservice-v2?wsdl')
 
@@ -167,6 +171,8 @@ def updateContent(contents):
   resolutions = soap.getResolutions(auth)
   statuses = soap.getStatuses(auth)
   priorities = soap.getPriorities(auth)
+  #customFields = soap.getCustomFields(auth)
+  #print customFields
 
   keys = getKeyList(contents)
   queries = getQueryList(contents)
@@ -186,18 +192,16 @@ def updateContent(contents):
     if issue.assignee != None:
       assignee = soap.getUser(auth, issue.assignee)
 
-    jiraIssue = issue.key+': '+issue.summary+' '+priority+' '+assignee.fullname+' Due:'+str(issue.duedate[0:3])
+    if linkOption == True:
+      jiraIssue = '<a href=\"'+info.baseUrl+'/browse/'+issue.key+'\">'+issue.key+'</a>'+': '+issue.summary+' '+priority+' '+assignee.fullname+' Due:'+str(issue.duedate[0:3])
+    else:
+      jiraIssue = issue.key+': '+issue.summary+' '+priority+' '+assignee.fullname+' Due:'+str(issue.duedate[0:3])
     contents = contents.replace(issuekey, jiraIssue)
 
   # get query
   for query in queries:
     issues = soap.getIssuesFromJqlSearch(auth, query, 5)
-    #print issues
-    #cf = soap.getCustomFields(auth)
-    #print cf
 
-    #format = '%3s %6s %11s %-20s %2s %2s %15s %2s %8s %10s'
-    #jiraIssueList = ' No    Key         WBS          Summary      S Pri    Duedate   % R  Assignee\n'
     jiraIssueList = "<table border='1' cellspacing='0'><tr><th>No.</th><th>Key</th><th>WBS</th><th>Summary</th><th>Status</th><th>Pri</th><th>Duedate</th><th>Prog.%</th><th>Res</th><th>Assignee</th></tr>"
     issueNum = 0
 
@@ -233,26 +237,10 @@ def updateContent(contents):
       if issue.assignee != None:
         assignee = soap.getUser(auth, issue.assignee)
 
-      '''
-      # make summary multiple lines
-      list = []
-      list.append(summary[0:20])
-      length = len(summary)
-      summary = summary[20:length]
-      while length > 20:
-        list.append(summary[0:20])
-        length = len(summary)
-        summary = summary[20:length]
-
-      jiraIssueList = jiraIssueList + format % (str(issueNum), key, wbs, list[0], status, priority, duedate, 'p', resolution, assignee) + '\n'
-      if len(list) > 1:
-        idx = 1
-        while idx < len(list):
-          jiraIssueList = jiraIssueList + format % ('', '', '', list[idx], '', '', '', '', '', '') + '\n'
-          idx = idx + 1
-      '''
-      #jiraIssueList = jiraIssueList + '<tr><td>'+no+'</td><td><a href=\"'+info.baseUrl+'/browse/'+key+'\">'+key+'</a></td><td>'+wbs+'</td><td>'+summary+'</td><td>'+status+'</td><td>'+priority+'</td><td>'+str(duedate)+'</td><td>'+'</td><td>'+resolution+'</td><td>'+assignee.fullname+'</td></tr>'
-      jiraIssueList = jiraIssueList + '<tr><td>'+no+'</td><td>'+key+'</a></td><td>'+wbs+'</td><td>'+summary+'</td><td>'+status+'</td><td>'+priority+'</td><td>'+str(duedate)+'</td><td>'+'</td><td>'+resolution+'</td><td>'+assignee.fullname+'</td></tr>'
+      if linkOption == True:
+        jiraIssueList = jiraIssueList + '<tr><td>'+no+'</td><td><a href=\"'+info.baseUrl+'/browse/'+key+'\">'+key+'</a></td><td>'+wbs+'</td><td>'+summary+'</td><td>'+status+'</td><td>'+priority+'</td><td>'+str(duedate)+'</td><td>'+'</td><td>'+resolution+'</td><td>'+assignee.fullname+'</td></tr>'
+      else:
+        jiraIssueList = jiraIssueList + '<tr><td>'+no+'</td><td>'+key+'</a></td><td>'+wbs+'</td><td>'+summary+'</td><td>'+status+'</td><td>'+priority+'</td><td>'+str(duedate)+'</td><td>'+'</td><td>'+resolution+'</td><td>'+assignee.fullname+'</td></tr>'
 
     jiraIssueList = jiraIssueList + '</table>'
     contents = contents.replace(query, jiraIssueList)
@@ -273,10 +261,25 @@ def writeContent(content, file_name):
   print 'Updated content has been written to Document \'%s\'.' % file_name
 
 ### upload document
-def uploadDoc(file):
+def uploadDoc(file, folderName):
   fpath = file
-  upload(fpath, file)
+  upload(fpath, file, folderName)
 
+
+### main ###
+parser = argparse.ArgumentParser()
+parser.add_argument('-l', '--link', action='store_true', default=False, dest='link', help='add a link to JIRA Key value')
+parser.add_argument('-f', '--filename', action='store', dest='filename', help='specify a file name to download')
+parser.add_argument('-d', '--directory', action='store', default='GoogleDocsJira', dest='folder', help='specify folder to upload a file')
+options = parser.parse_args()
+print options
+linkOption = options.link
+file_name = options.filename
+folder = options.folder
+
+if file_name == None:
+  parser.print_help()
+  sys.exit('Please specify file name with option \'-f\'.')
 
 client = gdata.docs.client.DocsClient(source='fg-issue-v1')
 client.ssl = True  # Force all API requests through HTTPS
@@ -294,11 +297,12 @@ file.close()
 
 client.ClientLogin(gmail, gpasswd, client.source, 'writely')
 
+###createDoc('file-edit') ## not used
 
-#createDoc('file-edit')
+file_ext = '.tmp'
 
-#downloadDoc('myTest.original')
-content = getContentsFromFile('myTest.original.tmp')
-content = updateContent(content) # this is test
-writeContent(content, 'myTest-view')
-uploadDoc('myTest-view')
+downloadDoc(file_name)
+content = getContentsFromFile(file_name+file_ext)
+content = updateContent(content, linkOption)
+writeContent(content, file_name+'-view')
+uploadDoc(file_name+'-view', folder)
