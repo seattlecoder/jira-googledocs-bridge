@@ -1,10 +1,10 @@
-Description:
+## Description:
 
-The google-docs-jira.py file is a python script that retrieves information from 
-the future grid JIRA server and put the information into a Google Docs document.
+The google-docs-jira file is a python script that retrieves information from the
+Future Grid JIRA server and put the information into a Google Docs document.
 
 
-Before you run the script:
+## Before you run the script:
 
 !! You need two accounts for Google and Future Grid JIRA !!
 
@@ -19,40 +19,23 @@ You need to install a number of python modules if you have not.
            to the beginning of the code.
 
 
-How to run (currently, it is a test version):
+## Usage:
 
-> python google-docs-jira.py
-or
->./google-docs-jira.py
+google-docs-jira.py [-h] [-l] [-f FILENAME] [-d FOLDER]
 
-The current script will do the following at once:
-1. create/upload file-edit
-2. download (export) file-edit as file-edit.tmp.
-3. edit the contents in file-edit.tmp
-4. write the update into a new file file-view
-5. print out some issues
-6. upload file-view
+optional arguments:
+  -h, --help            show this help message and exit
+  -l, --link            add a link to JIRA Key value
+  -f FILENAME, --filename FILENAME
+                        specify a file name to download
+  -d FOLDER, --directory FOLDER
+                        specify folder to upload a file
+  -s FONTSIZE, --fontsize FONTSIZE
+                        set font size
 
-After you run the script, you will see file-edit and file-view in the Google 
-DocsJira folder.
-
-
-Current Status:
-
-tested with multiple tags (file-edit). but not yet tested with actual files.
-
-tested contents = <issue><jira>FG-111</jira><jira>FG-101</jira><jiralist>
-summary ~ portal</jiralist></issue>
-
-FG-111 and FG-101 are replaced with actual issue data.
-The query 'summary ~ portal' is replaced with actual issues.
-
-
-Current Problems:
-
-*method getCustomFields() call fails.
-
-error message:
-
-com.atlassian.jira.rpc.exception.RemotePermissionException: Remote custom fields
-can only be retrieved by an administrator.
+The script download a file as '<filename>.tmp' and replaces jira keys and 
+quries to the corresponding information (not directly in the downloaded file 
+but in memory). The updated contents are written to a file '<filename>[-link]
+[-<fontsize>]-view.' The file '<filename>-view' is uploaded to the Google Docs 
+folder. If the folder name is given, the file is uploaded to the folder. The 
+default folder is 'GoogleDocsJira.'

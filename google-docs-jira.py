@@ -105,10 +105,10 @@ def replaceHtmlEntity(str):
 def getKeyList(string):
   keyList = []
 
-  jiraMatchObj = re.findall(r'&lt;jira&gt;FG-\d*&lt;/jira&gt;', string)
+  jiraMatchObjs = re.findall(r'&lt;jira&gt;FG-\d*&lt;/jira&gt;', string)
 
-  if jiraMatchObj:
-    for match in jiraMatchObj:
+  if jiraMatchObjs:
+    for match in jiraMatchObjs:
       match = re.sub(r'<.*?>', '', match)
       match = replaceHtmlEntity(match)
 
@@ -126,10 +126,10 @@ def getKeyList(string):
 ### get jira query from text contents
 def getQueryList(string):
   queryList = []
-  jiralistMatchObj = re.findall(r'&lt;jiralist&gt;.*?&lt;/jiralist&gt;', string)
+  jiralistMatchObjs = re.findall(r'&lt;jiralist&gt;.*?&lt;/jiralist&gt;', string)
   
-  if jiralistMatchObj:
-    for match in jiralistMatchObj:
+  if jiralistMatchObjs:
+    for match in jiralistMatchObjs:
       match = re.sub(r'<.*?>', '', match)
       match = replaceHtmlEntity(match)
 
@@ -144,15 +144,22 @@ def getQueryList(string):
 
   return queryList
 
-### find id
+### find correct object by id
 def findId(list, id):
   for e in list:
     if e.id == id:
       return e
   return None
 
+### change font size
+def changeFontSize(contents, size):
+  matchObjs = re.findall(r'font-size:\d*pt', contents);
+  contents = re.sub(r'font-size:\d*pt','font-size:'+str(size)+'pt', contents)
+
+  return contents
+
 ### test update content
-def updateContent(contents, linkOption):
+def updateContent(contents, linkOption, fontsize):
   # soap authentication
   soap = SOAPpy.WSDL.Proxy('http://jira.futuregrid.org/rpc/soap/jirasoapservice-v2?wsdl')
 
@@ -174,14 +181,14 @@ def updateContent(contents, linkOption):
   #customFields = soap.getCustomFields(auth)
   #print customFields
 
+  # get keys and queries
   keys = getKeyList(contents)
   queries = getQueryList(contents)
 
-  # get key value
+  # insert key data
   for issuekey in keys:
     issue = soap.getIssue(auth, issuekey)
 
-    #print issue key
     priority = '-'
     if issue.priority != None:
       pri = findId(priorities, issue.priority)
@@ -198,7 +205,7 @@ def updateContent(contents, linkOption):
       jiraIssue = issue.key+': '+issue.summary+' '+priority+' '+assignee.fullname+' Due:'+str(issue.duedate[0:3])
     contents = contents.replace(issuekey, jiraIssue)
 
-  # get query
+  # insert query data
   for query in queries:
     issues = soap.getIssuesFromJqlSearch(auth, query, 5)
 
@@ -245,7 +252,12 @@ def updateContent(contents, linkOption):
     jiraIssueList = jiraIssueList + '</table>'
     contents = contents.replace(query, jiraIssueList)
 
+  # remove tags
   contents = re.sub(r'&lt;jira&gt;|&lt;/jira&gt;|&lt;jiralist&gt;|&lt;/jiralist&gt;', '', contents)
+
+  # change font size
+  if fontsize != None:
+    contents = changeFontSize(contents, fontsize)
 
   #print 'updated contents: '+contents
   print 'Contents updated.'
@@ -267,20 +279,26 @@ def uploadDoc(file, folderName):
 
 
 ### main ###
+
+# create parser
 parser = argparse.ArgumentParser()
 parser.add_argument('-l', '--link', action='store_true', default=False, dest='link', help='add a link to JIRA Key value')
 parser.add_argument('-f', '--filename', action='store', dest='filename', help='specify a file name to download')
 parser.add_argument('-d', '--directory', action='store', default='GoogleDocsJira', dest='folder', help='specify folder to upload a file')
+parser.add_argument('-s', '--fontsize', action='store', dest='fontsize', type=int, help='set font size')
+
 options = parser.parse_args()
-print options
+#print options
 linkOption = options.link
 file_name = options.filename
 folder = options.folder
+font_size = options.fontsize
 
 if file_name == None:
   parser.print_help()
   sys.exit('Please specify file name with option \'-f\'.')
 
+# establish connection
 client = gdata.docs.client.DocsClient(source='fg-issue-v1')
 client.ssl = True  # Force all API requests through HTTPS
 client.http_client.debug = False  # Set to True for debugging HTTP requests
@@ -303,6 +321,13 @@ file_ext = '.tmp'
 
 downloadDoc(file_name)
 content = getContentsFromFile(file_name+file_ext)
-content = updateContent(content, linkOption)
-writeContent(content, file_name+'-view')
-uploadDoc(file_name+'-view', folder)
+content = updateContent(content, linkOption, font_size)
+
+if linkOption == True:
+  file_name = file_name + '-link'
+if font_size != None:
+  file_name = file_name + '-'+str(font_size)+'ft'
+file_name = file_name + '-view'
+
+writeContent(content, file_name)
+uploadDoc(file_name, folder)
