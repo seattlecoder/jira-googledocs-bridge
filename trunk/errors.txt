@@ -1,5 +1,14 @@
-The test-edit' file download error:
+* The test-edit' file download error:
 
 gdata.client.RequestError: Server responded with: 500
 
 reason => ???
+
+
+* getCustomFields() call error:
+
+<Fault soapenv:Server.userException: com.atlassian.jira.rpc.exception.RemotePerm
+issionException: Remote custom fields can only be retrieved by an administrator.
+: <SOAPpy.Types.structType detail at 4350335600>: {'hostname': 'jira.futuregrid.
+org', 'com.atlassian.jira.rpc.exception.RemoteException': ''}>
+
