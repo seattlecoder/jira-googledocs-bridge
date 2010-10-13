@@ -17,6 +17,9 @@ You need to install a number of python modules if you have not.
            Modify file Client.py Types.py and Server.py in the SOAPpy directory.
            In the files, move the line 'from future import nested_scope'
            to the beginning of the code.
+- Create files named 'jira-username', 'jira-passwd', 'gmail', and 'gpasswd' and 
+  write your corresponding user names and passwords to those files where the 
+  'google-docs-jira' script is.
 
 
 ## Usage:
