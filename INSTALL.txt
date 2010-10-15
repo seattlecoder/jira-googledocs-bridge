@@ -35,5 +35,9 @@ google-docs-jira.py script on Mac OS X and Linux.
  2-5. Download SOAPpy from http://sourceforge.net/projects/pywebsvcs/files/
       and unpack it. You will see the file at the bottom of the page.
 
- 2-6. Run the command in the SOAPpy-<version> directory.
+ 2-6. Modify file Client.py Types.py and Server.py in the 
+      SOAPpy-<version>/SOAPpy directory. In each file, the line 'from future
+      import nested_scope' should be the first line of the code.
+
+ 2-7. Run the command in the SOAPpy-<version> directory.
       > setup.py install
