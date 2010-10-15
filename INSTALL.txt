@@ -1,0 +1,39 @@
+This document describes how to install the Python modules to run the 
+google-docs-jira.py script on Mac OS X and Linux.
+
+## Mac OS X
+
+1. Install gdata.
+ 1-1. Download the gdata module from:
+      http://code.google.com/p/gdata-python-client/downloads/list
+      and unpack it in your directory.
+
+ 1-2. Run the command in the gdata-<version> directory.
+
+      For all users:
+      > ./setup.py install
+
+      To install it on your home directory
+      > ./setup.py install --home=<your home directory>
+
+      For more detail, go to 
+      http://code.google.com/apis/gdata/articles/python_client_lib.html
+
+2. Install SOAPpy. You also need to install PyXML and fpconst.
+ 2-1. Download PyXML from http://sourceforge.net/projects/pyxml/files/
+      and unpack it.
+
+ 2-2. Run the command in PyXML-<version> directory.
+      > setup.py install
+
+ 2-3. Download fpconst from http://pypi.python.org/pypi/fpconst/#downloads
+      and unpack it.
+
+ 2-4. Run the command in the fpconst-<version> directory.
+      > setup.py install
+
+ 2-5. Download SOAPpy from http://sourceforge.net/projects/pywebsvcs/files/
+      and unpack it. You will see the file at the bottom of the page.
+
+ 2-6. Run the command in the SOAPpy-<version> directory.
+      > setup.py install
