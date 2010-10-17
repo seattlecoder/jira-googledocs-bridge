@@ -101,8 +101,29 @@ def replaceHtmlEntity(str):
 
   return substr
 
+def getKeyListForJiratreeTag(string):
+  rootList = []
+
+  jiraKeyMatchObjs = re.findall(r'&lt;jiratree&gt;FG-\d*&lt;/jiratree&gt;', string)
+
+  if jiraKeyMatchObjs:
+    for match in jiraKeyMatchObjs:
+      match = re.sub(r'<.*?>', '', match)
+      match = replaceHtmlEntity(match)
+
+      dom = parseString(match)
+      treeRoots = dom.getElementsByTagName('jiratree')
+      for rootElement in treeRoots:
+        nodes = rootElement.childNodes
+        for node in nodes:
+          if node.nodeType == node.TEXT_NODE:
+            issuekey = node.data
+            rootList.append(issuekey)
+
+  return rootList
+
 ### get jira key from text contents
-def getKeyList(string):
+def getKeyListForJiraTag(string):
   keyList = []
 
   jiraMatchObjs = re.findall(r'&lt;jira&gt;FG-\d*&lt;/jira&gt;', string)
@@ -124,7 +145,7 @@ def getKeyList(string):
   return keyList
 
 ### get jira query from text contents
-def getQueryList(string):
+def getQueryListForJiralistTag(string):
   queryList = []
   jiralistMatchObjs = re.findall(r'&lt;jiralist&gt;.*?&lt;/jiralist&gt;', string)
   
@@ -158,6 +179,20 @@ def changeFontSize(contents, size):
 
   return contents
 
+### get children issues
+def getChildrenIssues(key):
+  query = 'issue in linkedissues(\''+key+'\', \'is parent of\') ORDER BY key ASC'
+  return soap.getIssuesFromJqlSearch(auth, query, 15)
+
+### build tree
+def buildTree(root, depth):
+  leaves = {}
+  levels = {}
+  visitingQ = array(root)
+
+### print tree
+#def printTree(root, depth, indentChar):
+
 ### test update content
 def updateContent(contents, linkOption, fontsize):
   # soap authentication
@@ -182,8 +217,9 @@ def updateContent(contents, linkOption, fontsize):
   #print customFields
 
   # get keys and queries
-  keys = getKeyList(contents)
-  queries = getQueryList(contents)
+  keys = getKeyListForJiraTag(contents)
+  queries = getQueryListForJiralistTag(contents)
+  roots = getKeyListForJiratreeTag(contents)
 
   # insert key data
   for issuekey in keys:
@@ -252,6 +288,12 @@ def updateContent(contents, linkOption, fontsize):
     jiraIssueList = jiraIssueList + '</table>'
     contents = contents.replace(query, jiraIssueList)
 
+  # tree display
+  depth = 10
+  for root in roots:
+    buildTree(root, depth)
+    #printTree(root, depth, indentChar)
+
   # remove tags
   contents = re.sub(r'&lt;jira&gt;|&lt;/jira&gt;|&lt;jiralist&gt;|&lt;/jiralist&gt;', '', contents)
 
@@ -314,15 +356,24 @@ gpasswd = file.readline().rstrip()
 file.close()
 
 client.ClientLogin(gmail, gpasswd, client.source, 'writely')
+'''
+feed = client.GetDocList(uri='/feeds/default/private/full/-/document')
+# get resource id by title (file name)
+acl_feed = client.GetAclPermissions(feed.entry[0].resource_id.text)
+# change acl_feed permission to reader ac.role.value = 'reader'
+# update updated_acl = client.Update(acl_entry)
+print feed.entry[0].resource_id.text, feed.entry[0].title.text
+for acl in acl_feed.entry:
+  print '%s (%s) is %s' % (acl.scope.value, acl.scope.type, acl.role.value)
 
 ###createDoc('file-edit') ## not used
-
+'''
 file_ext = '.tmp'
 
-downloadDoc(file_name)
+#downloadDoc(file_name)
 content = getContentsFromFile(file_name+file_ext)
 content = updateContent(content, linkOption, font_size)
-
+'''
 if linkOption == True:
   file_name = file_name + '-link'
 if font_size != None:
@@ -331,3 +382,4 @@ file_name = file_name + '-view'
 
 writeContent(content, file_name)
 uploadDoc(file_name, folder)
+'''
