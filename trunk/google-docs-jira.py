@@ -101,7 +101,8 @@ def replaceHtmlEntity(str):
 
   return substr
 
-def getKeyListForJiratreeTag(string):
+### get jira key from text contents (jiratree tag)
+def getKeyIssueListForJiratreeTag(string):
   rootList = []
 
   jiraKeyMatchObjs = re.findall(r'&lt;jiratree&gt;FG-\d*&lt;/jiratree&gt;', string)
@@ -122,7 +123,7 @@ def getKeyListForJiratreeTag(string):
 
   return rootList
 
-### get jira key from text contents
+### get jira key from text contents (jira tag)
 def getKeyListForJiraTag(string):
   keyList = []
 
@@ -179,19 +180,100 @@ def changeFontSize(contents, size):
 
   return contents
 
-### get children issues
-def getChildrenIssues(key):
-  query = 'issue in linkedissues(\''+key+'\', \'is parent of\') ORDER BY key ASC'
-  return soap.getIssuesFromJqlSearch(auth, query, 15)
-
 ### build tree
-def buildTree(root, depth):
-  leaves = {}
-  levels = {}
-  visitingQ = array(root)
+def buildTree(root, depth, soap, auth, leaves, levels):
+  visitingNodes = [root]
+  tmp = []
 
-### print tree
-#def printTree(root, depth, indentChar):
+  currentDepth = 0
+  while currentDepth <= depth:
+    for t in tmp:
+      visitingNodes.append(t)
+    tmp = []
+    for node in visitingNodes:
+      visitingNodes.pop(0)
+      nodeKey = node.key
+      levels[nodeKey] = currentDepth
+      children = soap.getIssuesFromJqlSearch(auth, 'issue in linkedissues(\''+nodeKey+'\', \'is parent of\') ORDER BY key ASC', 30)
+      leaves[nodeKey] = children
+      for child in children:
+        tmp.append(child)
+    currentDepth = currentDepth + 1
+
+### format issue
+def formatIssue(issue, priorities, info, soap, auth, link):
+  priority = '-'
+  if issue.priority != None:
+    pri = findId(priorities, issue.priority)
+    if pri != None:
+      priority = pri.name
+
+  #assignee = '-'
+  #if issue.assignee != None:
+  #  assignee = soap.getUser(auth, issue.assignee)
+  summary = '-'
+  if issue.summary != None:
+    summary = issue.summary
+  duedate = '-'
+  if issue.duedate != None:
+    duedate = str(issue.duedate[0:3])
+
+  if link == True:
+    jiraIssue = '<a href=\"'+info.baseUrl+'/browse/'+issue.key+'\">'+issue.key+'</a>'+': '+summary+' '+priority+' '+issue.assignee+' Due:'+duedate
+  else:
+    jiraIssue = issue.key+': '+issue.summary+' '+priority+' '+issue.assignee+' Due:'+str(issue.duedate[0:3])
+
+  return jiraIssue
+
+### make tree display format
+def makeTreeOutput(root, depth, indentChar, leaves, levels, priorities, info, soap, auth, link):
+  stack = [root]
+  indch = {0:''}
+  p1color = 'orange'
+  p2color = 'yellow'
+  p3color = ''
+  output = ''
+
+  i = 1
+  while i <= depth:
+    indch[i] = indch[i-1] + indentChar
+    i = i+1
+
+  while len(stack) > 0:
+    node = stack.pop(0)
+    wbsNum = 0
+    wbsHead = ''
+
+    if levels.has_key(node.key):
+      level = levels[node.key]
+      cFields = node.customFieldValues
+      isNsfWbs = 0
+      for cField in cFields:
+        if cField.customfieldId == 'customfield_10040':
+          values = cField.values
+          if values[0] == 'yes':
+            isNsfWbs = 1
+        elif cField.customfieldId == 'customfield_10000':
+          values = cField.values
+          wbsNum = values[0]
+      if isNsfWbs != 0:
+        wbsHead = str(wbsNum) + '|'
+      else:
+        wbsHead = ''
+      phases = node.affectsVersions
+
+      if p1color != '' and len(phases) == 1 and phases[0].name == 'Phase-I':
+        output = output + indch[level] + wbsHead + '<span style=\"background-color:' + p1color + '\">' + formatIssue(node, priorities, info, soap, auth, link) + '</span><br />'
+      elif (p2color!='' and len(phases)==1 and phases[0].name=='Phase-II') or (len(phases)==2 and (phases[0].name=='Phase-II' or phases[1].name=='Phase-II')):
+        output = output + indch[level] + wbsHead + '<span style=\"background-color:' + p2color + '\">' + formatIssue(node, priorities, info, soap, auth, link) + '</span><br />'
+      else:
+        output = output + indch[level] + wbsHead + node.key + '<br />'
+      children = leaves[node.key]
+      if len(children) != 0:
+        for child in children:
+          stack.append(child)
+
+  return output
 
 ### test update content
 def updateContent(contents, linkOption, fontsize):
@@ -219,26 +301,14 @@ def updateContent(contents, linkOption, fontsize):
   # get keys and queries
   keys = getKeyListForJiraTag(contents)
   queries = getQueryListForJiralistTag(contents)
-  roots = getKeyListForJiratreeTag(contents)
+  roots = getKeyIssueListForJiratreeTag(contents)
 
   # insert key data
   for issuekey in keys:
     issue = soap.getIssue(auth, issuekey)
 
-    priority = '-'
-    if issue.priority != None:
-      pri = findId(priorities, issue.priority)
-      if pri != None:
-        priority = pri.name
+    jiraIssue = formatIssue(issue, priorities, info, soap, auth, linkOption)
 
-    assignee = '-'
-    if issue.assignee != None:
-      assignee = soap.getUser(auth, issue.assignee)
-
-    if linkOption == True:
-      jiraIssue = '<a href=\"'+info.baseUrl+'/browse/'+issue.key+'\">'+issue.key+'</a>'+': '+issue.summary+' '+priority+' '+assignee.fullname+' Due:'+str(issue.duedate[0:3])
-    else:
-      jiraIssue = issue.key+': '+issue.summary+' '+priority+' '+assignee.fullname+' Due:'+str(issue.duedate[0:3])
     contents = contents.replace(issuekey, jiraIssue)
 
   # insert query data
@@ -289,13 +359,20 @@ def updateContent(contents, linkOption, fontsize):
     contents = contents.replace(query, jiraIssueList)
 
   # tree display
-  depth = 10
-  for root in roots:
-    buildTree(root, depth)
-    #printTree(root, depth, indentChar)
+  for rootKey in roots:
+    leaves = {}
+    levels = {}
+    indentChar = '*'
+    depth = 99
+
+    root = soap.getIssue(auth, rootKey)
+    
+    buildTree(root, depth, soap, auth, leaves, levels)
+    tree = makeTreeOutput(root, depth, indentChar, leaves, levels, priorities, info, soap, auth, linkOption)
+    contents = contents.replace(rootKey, tree)
 
   # remove tags
-  contents = re.sub(r'&lt;jira&gt;|&lt;/jira&gt;|&lt;jiralist&gt;|&lt;/jiralist&gt;', '', contents)
+  contents = re.sub(r'&lt;jira&gt;|&lt;/jira&gt;|&lt;jiralist&gt;|&lt;/jiralist&gt;|&lt;jiratree&gt;|&lt;/jiratree&gt', '', contents)
 
   # change font size
   if fontsize != None:
@@ -373,7 +450,7 @@ file_ext = '.tmp'
 #downloadDoc(file_name)
 content = getContentsFromFile(file_name+file_ext)
 content = updateContent(content, linkOption, font_size)
-'''
+
 if linkOption == True:
   file_name = file_name + '-link'
 if font_size != None:
@@ -382,4 +459,4 @@ file_name = file_name + '-view'
 
 writeContent(content, file_name)
 uploadDoc(file_name, folder)
-'''
+
