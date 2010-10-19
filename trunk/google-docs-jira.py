@@ -33,17 +33,17 @@ def upload(path, file, folderName):
 
 ### download
 ## resourceid: google document id
-def download(resourceid):
+def download(resourceid, f_ext):
   #print resourceid
   entry = client.GetDoc(resourceid)
 
   # download with tmp extension
-  #client.Download(entry, file_path='%s' % entry.title.text+file_ext)
+  #client.Download(entry, file_path='%s' % entry.title.text+f_ext)
 
-  file_path = '%s' % entry.title.text+file_ext
+  file_path = '%s' % entry.title.text+f_ext
   client.Export(entry, file_path)
 
-  print 'Document \'%s\' downloaded as \'%s\'.' % (entry.title.text, entry.title.text+file_ext)
+  print 'Document \'%s\' downloaded as \'%s\'.' % (entry.title.text, entry.title.text+f_ext)
 
 ### create a document with content and upload it to google docs
 ## fname: file name
@@ -68,13 +68,13 @@ def getResourceId(title):
   return None
 
 ### download document by title (file name)
-def downloadDoc(title):
+def downloadDoc(title, f_ext):
   resourceId = getResourceId(title)
 
   if resourceId == None:
     sys.exit('File \''+title+'\' does not exists.')
 
-  download(resourceId)
+  download(resourceId, f_ext)
 
 ### get content from html format
 def getContentsFromFile(fname):
@@ -124,7 +124,7 @@ def getKeyIssueListForJiratreeTag(string):
   return rootList
 
 ### get jira key from text contents (jira tag)
-def getKeyListForJiraTag(string):
+def getKeyIssueListForJiraTag(string):
   keyList = []
 
   jiraMatchObjs = re.findall(r'&lt;jira&gt;FG-\d*&lt;/jira&gt;', string)
@@ -187,17 +187,15 @@ def buildTree(root, depth, soap, auth, leaves, levels):
 
   currentDepth = 0
   while currentDepth <= depth:
-    for t in tmp:
-      visitingNodes.append(t)
+    visitingNodes.extend(tmp)
     tmp = []
     for node in visitingNodes:
-      visitingNodes.pop(0)
       nodeKey = node.key
       levels[nodeKey] = currentDepth
-      children = soap.getIssuesFromJqlSearch(auth, 'issue in linkedissues(\''+nodeKey+'\', \'is parent of\') ORDER BY key ASC', 30)
+      children = soap.getIssuesFromJqlSearch(auth, 'issue in linkedissues(\''+nodeKey+'\', \'is parent of\') ORDER BY key ASC', 1000)
       leaves[nodeKey] = children
-      for child in children:
-        tmp.append(child)
+      tmp.extend(children)
+    visitingNodes = []
     currentDepth = currentDepth + 1
 
 ### format issue
@@ -237,10 +235,15 @@ def makeTreeOutput(root, depth, indentChar, leaves, levels, priorities, info, so
   i = 1
   while i <= depth:
     indch[i] = indch[i-1] + indentChar
-    i = i+1
+    i = i + 1
+
+  i = 1
+  while i <= depth:
+    indch[i] = indch[i] + '&middot;&nbsp;'
+    i = i + 1
 
   while len(stack) > 0:
-    node = stack.pop(0)
+    node = stack.pop()
     wbsNum = 0
     wbsHead = ''
 
@@ -267,11 +270,11 @@ def makeTreeOutput(root, depth, indentChar, leaves, levels, priorities, info, so
       elif (p2color!='' and len(phases)==1 and phases[0].name=='Phase-II') or (len(phases)==2 and (phases[0].name=='Phase-II' or phases[1].name=='Phase-II')):
         output = output + indch[level] + wbsHead + '<span style=\"background-color:' + p2color + '\">' + formatIssue(node, priorities, info, soap, auth, link) + '</span><br />'
       else:
-        output = output + indch[level] + wbsHead + node.key + '<br />'
+        output = output + indch[level] + wbsHead + formatIssue(node, priorities, info, soap, auth, link) + '<br />'
       children = leaves[node.key]
       if len(children) != 0:
-        for child in children:
-          stack.append(child)
+        children.reverse()
+        stack.extend(children)
 
   return output
 
@@ -299,7 +302,7 @@ def updateContent(contents, linkOption, fontsize):
   #print customFields
 
   # get keys and queries
-  keys = getKeyListForJiraTag(contents)
+  keys = getKeyIssueListForJiraTag(contents)
   queries = getQueryListForJiralistTag(contents)
   roots = getKeyIssueListForJiratreeTag(contents)
 
@@ -323,7 +326,15 @@ def updateContent(contents, linkOption, fontsize):
       issueNum = issueNum + 1
       no = str(issueNum)
       key = issue.key
-      wbs = 'wbs'
+      wbs = '-'
+      progress = '0'
+      for customField in customFields:
+        if customField.customfieldId == 'customfield_10000':
+          values = customField.values
+          wbs = values[0]
+        if customField.customfieldId == 'customfield_10006':
+          values = customField.values
+          progress = values[0]
       summary = '-'
       if issue.summary != None:
         summary = issue.summary
@@ -340,7 +351,6 @@ def updateContent(contents, linkOption, fontsize):
       duedate = '-'
       if issue.duedate != None:
         duedate = issue.duedate[0:3]
-      #progress = issue.progress
       resolution = 'UNRESOLVED'
       if issue.resolution != None:
         res = findId(resolutions, issue.resolution)
@@ -351,9 +361,9 @@ def updateContent(contents, linkOption, fontsize):
         assignee = soap.getUser(auth, issue.assignee)
 
       if linkOption == True:
-        jiraIssueList = jiraIssueList + '<tr><td>'+no+'</td><td><a href=\"'+info.baseUrl+'/browse/'+key+'\">'+key+'</a></td><td>'+wbs+'</td><td>'+summary+'</td><td>'+status+'</td><td>'+priority+'</td><td>'+str(duedate)+'</td><td>'+'</td><td>'+resolution+'</td><td>'+assignee.fullname+'</td></tr>'
+        jiraIssueList = jiraIssueList + '<tr><td>'+no+'</td><td><a href=\"'+info.baseUrl+'/browse/'+key+'\">'+key+'</a></td><td>'+wbs+'</td><td>'+summary+'</td><td>'+status+'</td><td>'+priority+'</td><td>'+str(duedate)+'</td><td>'+progress+'</td><td>'+resolution+'</td><td>'+assignee.fullname+'</td></tr>'
       else:
-        jiraIssueList = jiraIssueList + '<tr><td>'+no+'</td><td>'+key+'</a></td><td>'+wbs+'</td><td>'+summary+'</td><td>'+status+'</td><td>'+priority+'</td><td>'+str(duedate)+'</td><td>'+'</td><td>'+resolution+'</td><td>'+assignee.fullname+'</td></tr>'
+        jiraIssueList = jiraIssueList + '<tr><td>'+no+'</td><td>'+key+'</a></td><td>'+wbs+'</td><td>'+summary+'</td><td>'+status+'</td><td>'+priority+'</td><td>'+str(duedate)+'</td><td>'+progress+'</td><td>'+resolution+'</td><td>'+assignee.fullname+'</td></tr>'
 
     jiraIssueList = jiraIssueList + '</table>'
     contents = contents.replace(query, jiraIssueList)
@@ -362,7 +372,7 @@ def updateContent(contents, linkOption, fontsize):
   for rootKey in roots:
     leaves = {}
     levels = {}
-    indentChar = '*'
+    indentChar = '&nbsp;&nbsp;&nbsp;'
     depth = 99
 
     root = soap.getIssue(auth, rootKey)
@@ -372,7 +382,7 @@ def updateContent(contents, linkOption, fontsize):
     contents = contents.replace(rootKey, tree)
 
   # remove tags
-  contents = re.sub(r'&lt;jira&gt;|&lt;/jira&gt;|&lt;jiralist&gt;|&lt;/jiralist&gt;|&lt;jiratree&gt;|&lt;/jiratree&gt', '', contents)
+  contents = re.sub(r'&lt;jira&gt;|&lt;/jira&gt;|&lt;jiralist&gt;|&lt;/jiralist&gt;|&lt;jiratree&gt;|&lt;/jiratree&gt;', '', contents)
 
   # change font size
   if fontsize != None:
@@ -447,10 +457,11 @@ for acl in acl_feed.entry:
 '''
 file_ext = '.tmp'
 
-#downloadDoc(file_name)
+downloadDoc(file_name, file_ext)
 content = getContentsFromFile(file_name+file_ext)
 content = updateContent(content, linkOption, font_size)
 
+file_name = file_name.replace('-edit','')
 if linkOption == True:
   file_name = file_name + '-link'
 if font_size != None:
@@ -459,4 +470,3 @@ file_name = file_name + '-view'
 
 writeContent(content, file_name)
 uploadDoc(file_name, folder)
-
