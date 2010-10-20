@@ -43,7 +43,10 @@ google-docs-jira.py script on Mac OS X and Linux.
       > setup.py install
 
 
+Reference for gdata installation:
+ http://code.google.com/apis/gdata/articles/python_client_lib.html
+
 References for SOAPpy installation:
-http://stefw.livejournal.com/13835.html
-http://stackoverflow.com/questions/1414437/soappy-installation-error
-http://diveintopython.org/soap_web_services/install.html
+ http://stefw.livejournal.com/13835.html
+ http://stackoverflow.com/questions/1414437/soappy-installation-error
+ http://diveintopython.org/soap_web_services/install.html

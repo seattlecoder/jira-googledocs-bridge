@@ -24,7 +24,7 @@ You need to install a number of python modules if you have not.
 
 ## Usage:
 
-google-docs-jira.py [-h] [-l] [-f FILENAME] [-d FOLDER]
+google-docs-jira.py [-h] [-l] [-f FILENAME] [-d FOLDER] [-s FONTSIZE] [-i]
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -35,6 +35,7 @@ optional arguments:
                         specify folder to upload a file
   -s FONTSIZE, --fontsize FONTSIZE
                         set font size
+  -i, --useli           use list items
 
 The script download a file as '<filename>.tmp' and replaces jira keys and 
 quries to the corresponding information (not directly in the downloaded file 
