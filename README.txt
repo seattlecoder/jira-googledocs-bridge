@@ -6,6 +6,8 @@ Future Grid JIRA server and put the information into a Google Docs document.
 
 ## Before you run the script:
 
+It requires Python version 2.7 or later.
+
 !! You need two accounts for Google and Future Grid JIRA !!
 
 You need to install a number of python modules if you have not.
