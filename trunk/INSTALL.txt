@@ -50,3 +50,30 @@ References for SOAPpy installation:
  http://stefw.livejournal.com/13835.html
  http://stackoverflow.com/questions/1414437/soappy-installation-error
  http://diveintopython.org/soap_web_services/install.html
+
+
+Gregor's quick intsall instructions
+===================================
+
+wget http://gdata-python-client.googlecode.com/files/gdata-2.0.12.tar.gz
+tar xvf gdata-2.0.12.tar.gz
+cd gdata-2.0.12
+sudo ./setup.py install
+cd ..
+wget http://sourceforge.net/projects/pyxml/files/pyxml/0.8.4/PyXML-0.8.4.tar.gz
+cd ..
+tar xvf PyXML-0.8.4.tar.gz 
+cd PyXML-0.8.4
+sudo ./setup.py install
+wget http://pypi.python.org/packages/source/f/fpconst/fpconst-0.7.2.tar.gz
+tar xvf fpconst-0.7.2.tar.gz 
+cd fpconst-0.7.2
+sudo ./setup.py install
+chmod a+x setup.py 
+sudo python ./setup.py install
+wget http://sourceforge.net/projects/pywebsvcs/files/SOAP.py/0.12.0_rc1/SOAPpy-0.12.0.tar.gz
+tar xvf SOAPpy-0.12.0.tar.gz 
+
+edit the files as descripbed
+
+sudo python setup.py install
