@@ -55,6 +55,8 @@ References for SOAPpy installation:
 Gregor's quick intsall instructions
 ===================================
 
+This assumes you have wget installed as part of port.
+
 wget http://gdata-python-client.googlecode.com/files/gdata-2.0.12.tar.gz
 tar xvf gdata-2.0.12.tar.gz
 cd gdata-2.0.12
