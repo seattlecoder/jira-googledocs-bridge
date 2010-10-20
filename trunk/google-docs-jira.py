@@ -224,7 +224,7 @@ def formatIssue(issue, priorities, info, soap, auth, link):
   return jiraIssue
 
 ### make tree display format
-def makeTreeOutput(root, depth, indentChar, leaves, levels, priorities, info, soap, auth, link):
+def makeTreeOutput(root, depth, indentChar, leaves, levels, priorities, info, soap, auth, link, listItem):
   stack = [root]
   indch = {0:''}
   p1color = 'orange'
@@ -242,6 +242,8 @@ def makeTreeOutput(root, depth, indentChar, leaves, levels, priorities, info, so
     indch[i] = indch[i] + '&middot;&nbsp;'
     i = i + 1
 
+  levelseq = []
+  levelstack = []
   while len(stack) > 0:
     node = stack.pop()
     wbsNum = 0
@@ -249,6 +251,23 @@ def makeTreeOutput(root, depth, indentChar, leaves, levels, priorities, info, so
 
     if levels.has_key(node.key):
       level = levels[node.key]
+
+      if listItem == True:
+        levelseq.append(level)
+        size = len(levelseq)
+        diff = 0
+        if len(levelseq) > 1:
+          diff = levelseq[size-1] - levelseq[size-2]
+        if diff == 1:
+          levelstack.append(level)
+          output = output + '<ul>'
+        elif diff < 0:
+          i = diff
+          while i < 0:
+            levelstack.pop()
+            output = output + '</ul>'
+            i = i+1
+      
       cFields = node.customFieldValues
       isNsfWbs = 0
       for cField in cFields:
@@ -264,22 +283,35 @@ def makeTreeOutput(root, depth, indentChar, leaves, levels, priorities, info, so
       else:
         wbsHead = ''
       phases = node.affectsVersions
-
+      
       if p1color != '' and len(phases) == 1 and phases[0].name == 'Phase-I':
-        output = output + indch[level] + wbsHead + '<span style=\"background-color:' + p1color + '\">' + formatIssue(node, priorities, info, soap, auth, link) + '</span><br />'
+        if listItem == True:
+          output = output + '<li>' + wbsHead + '<span style=\"background-color:' + p1color + '\">' + formatIssue(node, priorities, info, soap, auth, link) + '</span></li><br />'
+        else:
+          output = output + indch[level] + wbsHead + '<span style=\"background-color:' + p1color + '\">' + formatIssue(node, priorities, info, soap, auth, link) + '</span><br />'
       elif (p2color!='' and len(phases)==1 and phases[0].name=='Phase-II') or (len(phases)==2 and (phases[0].name=='Phase-II' or phases[1].name=='Phase-II')):
-        output = output + indch[level] + wbsHead + '<span style=\"background-color:' + p2color + '\">' + formatIssue(node, priorities, info, soap, auth, link) + '</span><br />'
+        if listItem == True:
+          output = output + '<li>' + wbsHead + '<span style=\"background-color:' + p2color + '\">' + formatIssue(node, priorities, info, soap, auth, link) + '</span></li><br />'
+        else:
+          output = output + indch[level] + wbsHead + '<span style=\"background-color:' + p2color + '\">' + formatIssue(node, priorities, info, soap, auth, link) + '</span><br />'
       else:
-        output = output + indch[level] + wbsHead + formatIssue(node, priorities, info, soap, auth, link) + '<br />'
+        if listItem == True:
+          output = output + '<li>' + wbsHead + formatIssue(node, priorities, info, soap, auth, link) + '</li><br />'
+        else:
+          output = output + indch[level] + wbsHead + formatIssue(node, priorities, info, soap, auth, link) + '<br />'
       children = leaves[node.key]
       if len(children) != 0:
         children.reverse()
         stack.extend(children)
+  if listItem == True:
+    while len(levelstack) > 0:
+      levelstack.pop()
+      output = output + '</ul>'
 
   return output
 
 ### test update content
-def updateContent(contents, linkOption, fontsize):
+def updateContent(contents, linkOption, fontsize, listItem):
   # soap authentication
   soap = SOAPpy.WSDL.Proxy('http://jira.futuregrid.org/rpc/soap/jirasoapservice-v2?wsdl')
 
@@ -378,7 +410,7 @@ def updateContent(contents, linkOption, fontsize):
     root = soap.getIssue(auth, rootKey)
     
     buildTree(root, depth, soap, auth, leaves, levels)
-    tree = makeTreeOutput(root, depth, indentChar, leaves, levels, priorities, info, soap, auth, linkOption)
+    tree = makeTreeOutput(root, depth, indentChar, leaves, levels, priorities, info, soap, auth, linkOption, listItem)
     contents = contents.replace(rootKey, tree)
 
   # remove tags
@@ -415,6 +447,7 @@ parser.add_argument('-l', '--link', action='store_true', default=False, dest='li
 parser.add_argument('-f', '--filename', action='store', dest='filename', help='specify a file name to download')
 parser.add_argument('-d', '--directory', action='store', default='GoogleDocsJira', dest='folder', help='specify folder to upload a file')
 parser.add_argument('-s', '--fontsize', action='store', dest='fontsize', type=int, help='set font size')
+parser.add_argument('-i', '--useli', action='store_true', default=False, dest='useli', help='use list items')
 
 options = parser.parse_args()
 #print options
@@ -422,6 +455,7 @@ linkOption = options.link
 file_name = options.filename
 folder = options.folder
 font_size = options.fontsize
+li = options.useli
 
 if file_name == None:
   parser.print_help()
@@ -457,15 +491,17 @@ for acl in acl_feed.entry:
 '''
 file_ext = '.tmp'
 
-downloadDoc(file_name, file_ext)
+#downloadDoc(file_name, file_ext)
 content = getContentsFromFile(file_name+file_ext)
-content = updateContent(content, linkOption, font_size)
+content = updateContent(content, linkOption, font_size, li)
 
 file_name = file_name.replace('-edit','')
 if linkOption == True:
   file_name = file_name + '-link'
 if font_size != None:
   file_name = file_name + '-'+str(font_size)+'ft'
+if li == True:
+  file_name = file_name + '-list'
 file_name = file_name + '-view'
 
 writeContent(content, file_name)
