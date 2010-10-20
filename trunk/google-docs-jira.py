@@ -491,7 +491,7 @@ for acl in acl_feed.entry:
 '''
 file_ext = '.tmp'
 
-#downloadDoc(file_name, file_ext)
+downloadDoc(file_name, file_ext)
 content = getContentsFromFile(file_name+file_ext)
 content = updateContent(content, linkOption, font_size, li)
 
