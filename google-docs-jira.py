@@ -1,12 +1,19 @@
 #!/usr/bin/python
 
+import platform
+import sys
+
+version = platform.python_version()
+if int(version.replace('.','')) < 270:
+  print 'Current Python version: '+version
+  sys.exit('You need Python version 2.7.0 or later to run this script.')
+
 import gdata.docs.data
 import gdata.docs.client
 import SOAPpy
 import re
 from xml.dom.minidom import parseString
 import argparse
-import sys
 
 
 ### get folder uri
@@ -89,17 +96,16 @@ def getContentsFromFile(fname):
 def replaceHtmlEntity(str):
   lt = '&lt;'
   gt = '&gt;'
-
-  # get start / end index of content
-  start = str.index(lt)
-  end = str.rindex(gt) + 4
+  whitespace = '&nbsp;'
+  dquote = '&rdquo;'
 
   # replace html entity
-  substr = str[start:end]
-  substr = substr.replace(lt,'<')
-  substr = substr.replace(gt,'>')
+  str = str.replace(lt,'<')
+  str = str.replace(gt,'>')
+  str = str.replace(whitespace,'')
+  str = str.replace(dquote,'\"')
 
-  return substr
+  return str
 
 ### get jira key from text contents (jiratree tag)
 def getKeyIssueListForJiratreeTag(string):
@@ -119,7 +125,7 @@ def getKeyIssueListForJiratreeTag(string):
         for node in nodes:
           if node.nodeType == node.TEXT_NODE:
             issuekey = node.data
-            rootList.append(issuekey)
+            rootList.append(issuekey.strip())
 
   return rootList
 
@@ -141,15 +147,16 @@ def getKeyIssueListForJiraTag(string):
         for node in nodes:
           if node.nodeType == node.TEXT_NODE:
             issuekey = node.data
-            keyList.append(issuekey)
+            keyList.append(issuekey.strip())
 
   return keyList
 
 ### get jira query from text contents
 def getQueryListForJiralistTag(string):
   queryList = []
-  jiralistMatchObjs = re.findall(r'&lt;jiralist&gt;.*?&lt;/jiralist&gt;', string)
-  
+  fieldsList = []
+  jiralistMatchObjs = re.findall(r'&lt;jiralist.*?&gt;.*?&lt;/jiralist&gt;', string)
+
   if jiralistMatchObjs:
     for match in jiralistMatchObjs:
       match = re.sub(r'<.*?>', '', match)
@@ -158,13 +165,22 @@ def getQueryListForJiralistTag(string):
       dom = parseString(match)
       jiralists = dom.getElementsByTagName('jiralist')
       for jiralist in jiralists:
+        # get fields
+        if jiralist.hasAttribute('fields'):
+          fields = jiralist.getAttribute('fields')
+          fieldsList.append(fields.strip())
+        else:
+          fieldsList.append('')
+        # get query
         nodes = jiralist.childNodes
         for node in nodes:
           if node.nodeType == node.TEXT_NODE:
             query = node.data
-            queryList.append(query)
+            queryList.append(query.strip())
 
-  return queryList
+  jiraQueryFieldsList = [queryList, fieldsList]
+
+  return jiraQueryFieldsList
 
 ### find correct object by id
 def findId(list, id):
@@ -252,6 +268,7 @@ def makeTreeOutput(root, depth, indentChar, leaves, levels, priorities, info, so
     if levels.has_key(node.key):
       level = levels[node.key]
 
+      # format unordered list items based on tree level
       if listItem == True:
         levelseq.append(level)
         size = len(levelseq)
@@ -268,6 +285,7 @@ def makeTreeOutput(root, depth, indentChar, leaves, levels, priorities, info, so
             output = output + '</ul>'
             i = i+1
       
+      # format issue data
       cFields = node.customFieldValues
       isNsfWbs = 0
       for cField in cFields:
@@ -284,6 +302,7 @@ def makeTreeOutput(root, depth, indentChar, leaves, levels, priorities, info, so
         wbsHead = ''
       phases = node.affectsVersions
       
+      # set different color based on Phase
       if p1color != '' and len(phases) == 1 and phases[0].name == 'Phase-I':
         if listItem == True:
           output = output + '<li>' + wbsHead + '<span style=\"background-color:' + p1color + '\">' + formatIssue(node, priorities, info, soap, auth, link) + '</span></li><br />'
@@ -317,12 +336,12 @@ def updateContent(contents, linkOption, fontsize, listItem):
 
   # read jira user name from file
   file = open('jira-username','r')
-  jira_username = file.readline().rstrip()
+  jira_username = file.readline().strip()
   file.close()
 
   # read jira password from file
   file = open('jira-passwd','r')
-  jira_passwd = file.readline().rstrip()
+  jira_passwd = file.readline().strip()
   file.close()
 
   auth = soap.login(jira_username, jira_passwd)
@@ -335,7 +354,9 @@ def updateContent(contents, linkOption, fontsize, listItem):
 
   # get keys and queries
   keys = getKeyIssueListForJiraTag(contents)
-  queries = getQueryListForJiralistTag(contents)
+  queriesWithFields = getQueryListForJiralistTag(contents)
+  queries = queriesWithFields[0]
+  fieldsList = queriesWithFields[1]
   roots = getKeyIssueListForJiratreeTag(contents)
 
   # insert key data
@@ -347,12 +368,37 @@ def updateContent(contents, linkOption, fontsize, listItem):
     contents = contents.replace(issuekey, jiraIssue)
 
   # insert query data
-  for query in queries:
+  if len(queries) != len(fieldsList): # query : fields attr should be 1:1
+    sys.exit('error')
+
+  listSize = len(queries)
+  i = 0
+  while i < listSize:
+    query = queries[i]
+    fields = fieldsList[i]
+    fieldValues = []
+
     issues = soap.getIssuesFromJqlSearch(auth, query, 5)
 
-    jiraIssueList = "<table border='1' cellspacing='0'><tr><th>No.</th><th>Key</th><th>WBS</th><th>Summary</th><th>Status</th><th>Pri</th><th>Duedate</th><th>Prog.%</th><th>Res</th><th>Assignee</th></tr>"
-    issueNum = 0
+    # format table columns based on fields attribute
+    tableFormat = "<table border='1' cellspacing='0'><tr><th>No.</th>"
+    if len(fields) > 0:
+      # get field values
+      tmpList = fields.split(',')
+      for tmp in tmpList:
+        value = tmp.strip().title()
+        if value == 'Wbs':
+          value = 'WBS'
+        fieldValues.append(value)
+        tableFormat = tableFormat + '<th>' + value + '</th>'
+    else:
+      tableFormat = tableFormat + "<th>Key</th><th>WBS</th><th>Summary</th><th>Status</th><th>Pri</th><th>Duedate</th><th>Prog.%</th><th>Res</th><th>Assignee</th>"
+    tableFormat = tableFormat + "</tr>"
 
+    jiraIssueList = tableFormat
+
+    # get data
+    issueNum = 0
     for issue in issues:
       customFields = issue.customFieldValues
       issueNum = issueNum + 1
@@ -392,13 +438,42 @@ def updateContent(contents, linkOption, fontsize, listItem):
       if issue.assignee != None:
         assignee = soap.getUser(auth, issue.assignee)
 
+      keyColumn = ''
       if linkOption == True:
-        jiraIssueList = jiraIssueList + '<tr><td>'+no+'</td><td><a href=\"'+info.baseUrl+'/browse/'+key+'\">'+key+'</a></td><td>'+wbs+'</td><td>'+summary+'</td><td>'+status+'</td><td>'+priority+'</td><td>'+str(duedate)+'</td><td>'+progress+'</td><td>'+resolution+'</td><td>'+assignee.fullname+'</td></tr>'
+        keyColumn = '<td><a href=\"'+info.baseUrl+'/browse/'+key+'\">'+key+'</a></td>'
       else:
-        jiraIssueList = jiraIssueList + '<tr><td>'+no+'</td><td>'+key+'</a></td><td>'+wbs+'</td><td>'+summary+'</td><td>'+status+'</td><td>'+priority+'</td><td>'+str(duedate)+'</td><td>'+progress+'</td><td>'+resolution+'</td><td>'+assignee.fullname+'</td></tr>'
+        keyColumn = '<td>' + key + '</td>'
+
+      # fill table based on fields attribute
+      if len(fields) > 0:
+        jiraIssueList = jiraIssueList + '<tr><td>'+no+'</td>'
+        for fvalue in fieldValues:
+          if fvalue.lower() == 'key':
+            jiraIssueList = jiraIssueList + keyColumn
+          elif fvalue.lower() == 'wbs':
+            jiraIssueList = jiraIssueList + '<td>' + wbs + '</td>'
+          elif fvalue.lower() == 'summary':
+            jiraIssueList = jiraIssueList + '<td>' + summary + '</td>'
+          elif fvalue.lower() == 'status':
+            jiraIssueList = jiraIssueList + '<td>' + status + '</td>'
+          elif fvalue.lower() == 'pri' or fvalue.lower() == 'priority':
+            jiraIssueList = jiraIssueList + '<td>' + priority + '</td>'
+          elif fvalue.lower() == 'duedate':
+            jiraIssueList = jiraIssueList + '<td>' + str(duedate) + '</td>'
+          elif fvalue.lower() == 'prog' or fvalue.lower() == 'progress':
+            jiraIssueList = jiraIssueList + '<td>' + progress + '</td>'
+          elif fvalue.lower() == 'res' or fvalue.lower() == 'resolution':
+            jiraIssueList = jiraIssueList + '<td>' + resolution + '</td>'
+          elif fvalue.lower() == 'assignee':
+            jiraIssueList = jiraIssueList + '<td>' + assignee.fullname + '</td>'
+        jiraIssueList = jiraIssueList + '</tr>'
+      else:
+        jiraIssueList = jiraIssueList + '<tr><td>'+no+'</td>'+keyColumn+'<td>'+wbs+'</td><td>'+summary+'</td><td>'+status+'</td><td>'+priority+'</td><td>'+str(duedate)+'</td><td>'+progress+'</td><td>'+resolution+'</td><td>'+assignee.fullname+'</td></tr>'
 
     jiraIssueList = jiraIssueList + '</table>'
+
     contents = contents.replace(query, jiraIssueList)
+    i = i + 1
 
   # tree display
   for rootKey in roots:
@@ -468,12 +543,12 @@ client.http_client.debug = False  # Set to True for debugging HTTP requests
 
 # read google email from file
 file = open('gmail','r')
-gmail = file.readline().rstrip()
+gmail = file.readline().strip()
 file.close()
 
 # read google password from file
 file = open('gpasswd','r')
-gpasswd = file.readline().rstrip()
+gpasswd = file.readline().strip()
 file.close()
 
 client.ClientLogin(gmail, gpasswd, client.source, 'writely')
