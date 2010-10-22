@@ -316,8 +316,8 @@ def makeTreeOutput(root, depth, indentChar, leaves, levels, priorities, info, so
 
   return output
 
-### test update content
-def updateContent(contents, linkOption, fontsize, listItem):
+### inject data
+def updateContents(contents, linkOption, fontsize, listItem):
   # soap authentication
   soap = SOAPpy.WSDL.Proxy('http://jira.futuregrid.org/rpc/soap/jirasoapservice-v2?wsdl')
 
@@ -557,7 +557,7 @@ file_ext = '.tmp'
 
 downloadDoc(file_name, file_ext)
 content = getContentsFromFile(file_name+file_ext)
-content = updateContent(content, linkOption, font_size, li)
+content = updateContents(content, linkOption, font_size, li)
 delete(file_name+file_ext) # remove temporary file
 
 # edit file name before upload
