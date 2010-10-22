@@ -76,6 +76,6 @@ sudo python ./setup.py install
 wget http://sourceforge.net/projects/pywebsvcs/files/SOAP.py/0.12.0_rc1/SOAPpy-0.12.0.tar.gz
 tar xvf SOAPpy-0.12.0.tar.gz 
 
-edit the files as descripbed
+edit the files as described
 
 sudo python setup.py install
