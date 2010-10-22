@@ -3,6 +3,7 @@
 import platform
 import sys
 
+# check Python version before run
 version = platform.python_version()
 if int(version.replace('.','')) < 270:
   print 'Current Python version: '+version
@@ -14,6 +15,7 @@ import SOAPpy
 import re
 from xml.dom.minidom import parseString
 import argparse
+import os
 
 
 ### get folder uri
@@ -36,33 +38,21 @@ def upload(path, file, folderName):
   folder_uri = getFolderUri(folderName)
   entry = client.Upload(media=path, title=file, folder_or_uri=folder_uri, content_type='application/msword')
 
-  print 'Document \'%s\' uploaded.' % file
+  print 'Document \'%s\' uploaded.' % path
 
 ### download
 ## resourceid: google document id
+## f_ext: file extension
 def download(resourceid, f_ext):
-  #print resourceid
   entry = client.GetDoc(resourceid)
 
   # download with tmp extension
-  #client.Download(entry, file_path='%s' % entry.title.text+f_ext)
+  #client.Download(entry, file_path='%s' % os.path.abspath(entry.title.text)+f_ext)
 
-  file_path = '%s' % entry.title.text+f_ext
+  file_path = '%s' % os.path.abspath(entry.title.text) + f_ext
   client.Export(entry, file_path)
 
   print 'Document \'%s\' downloaded as \'%s\'.' % (entry.title.text, entry.title.text+f_ext)
-
-### create a document with content and upload it to google docs
-## fname: file name
-#def createDoc(fname):
-#  file = open(fname,'w')
-#  file.write('<jira>FG-101</jira>')
-#  file.close()
-#
-#  print 'Document \'%s\' created with contents.' % fname
-#
-#  fpath = fname
-#  upload(fpath, fname)
 
 ### get resource id by given doc title
 ## title: file name on the Google Docs server.
@@ -113,19 +103,18 @@ def getKeyIssueListForJiratreeTag(string):
 
   jiraKeyMatchObjs = re.findall(r'&lt;jiratree&gt;FG-\d*&lt;/jiratree&gt;', string)
 
-  if jiraKeyMatchObjs:
-    for match in jiraKeyMatchObjs:
-      match = re.sub(r'<.*?>', '', match)
-      match = replaceHtmlEntity(match)
+  for match in jiraKeyMatchObjs:
+    match = re.sub(r'<.*?>', '', match)
+    match = replaceHtmlEntity(match)
 
-      dom = parseString(match)
-      treeRoots = dom.getElementsByTagName('jiratree')
-      for rootElement in treeRoots:
-        nodes = rootElement.childNodes
-        for node in nodes:
-          if node.nodeType == node.TEXT_NODE:
-            issuekey = node.data
-            rootList.append(issuekey.strip())
+    dom = parseString(match)
+    treeRoots = dom.getElementsByTagName('jiratree')
+    for rootElement in treeRoots:
+      nodes = rootElement.childNodes
+      for node in nodes:
+        if node.nodeType == node.TEXT_NODE:
+          issuekey = node.data
+          rootList.append(issuekey.strip())
 
   return rootList
 
@@ -135,19 +124,18 @@ def getKeyIssueListForJiraTag(string):
 
   jiraMatchObjs = re.findall(r'&lt;jira&gt;FG-\d*&lt;/jira&gt;', string)
 
-  if jiraMatchObjs:
-    for match in jiraMatchObjs:
-      match = re.sub(r'<.*?>', '', match)
-      match = replaceHtmlEntity(match)
+  for match in jiraMatchObjs:
+    match = re.sub(r'<.*?>', '', match)
+    match = replaceHtmlEntity(match)
 
-      dom = parseString(match)
-      jiras = dom.getElementsByTagName('jira')
-      for jira in jiras:
-        nodes = jira.childNodes
-        for node in nodes:
-          if node.nodeType == node.TEXT_NODE:
-            issuekey = node.data
-            keyList.append(issuekey.strip())
+    dom = parseString(match)
+    jiras = dom.getElementsByTagName('jira')
+    for jira in jiras:
+      nodes = jira.childNodes
+      for node in nodes:
+        if node.nodeType == node.TEXT_NODE:
+          issuekey = node.data
+          keyList.append(issuekey.strip())
 
   return keyList
 
@@ -157,26 +145,25 @@ def getQueryListForJiralistTag(string):
   fieldsList = []
   jiralistMatchObjs = re.findall(r'&lt;jiralist.*?&gt;.*?&lt;/jiralist&gt;', string)
 
-  if jiralistMatchObjs:
-    for match in jiralistMatchObjs:
-      match = re.sub(r'<.*?>', '', match)
-      match = replaceHtmlEntity(match)
+  for match in jiralistMatchObjs:
+    match = re.sub(r'<.*?>', '', match)
+    match = replaceHtmlEntity(match)
 
-      dom = parseString(match)
-      jiralists = dom.getElementsByTagName('jiralist')
-      for jiralist in jiralists:
-        # get fields
-        if jiralist.hasAttribute('fields'):
-          fields = jiralist.getAttribute('fields')
-          fieldsList.append(fields.strip())
-        else:
-          fieldsList.append('')
-        # get query
-        nodes = jiralist.childNodes
-        for node in nodes:
-          if node.nodeType == node.TEXT_NODE:
-            query = node.data
-            queryList.append(query.strip())
+    dom = parseString(match)
+    jiralists = dom.getElementsByTagName('jiralist')
+    for jiralist in jiralists:
+      # get fields
+      if jiralist.hasAttribute('fields'):
+        fields = jiralist.getAttribute('fields')
+        fieldsList.append(fields.strip())
+      else:
+        fieldsList.append('')
+      # get query
+      nodes = jiralist.childNodes
+      for node in nodes:
+        if node.nodeType == node.TEXT_NODE:
+          query = node.data
+          queryList.append(query.strip())
 
   jiraQueryFieldsList = [queryList, fieldsList]
 
@@ -235,7 +222,7 @@ def formatIssue(issue, priorities, info, soap, auth, link):
   if link == True:
     jiraIssue = '<a href=\"'+info.baseUrl+'/browse/'+issue.key+'\">'+issue.key+'</a>'+': '+summary+' '+priority+' '+issue.assignee+' Due:'+duedate
   else:
-    jiraIssue = issue.key+': '+issue.summary+' '+priority+' '+issue.assignee+' Due:'+str(issue.duedate[0:3])
+    jiraIssue = issue.key+': '+issue.summary+' '+priority+' '+issue.assignee+' Due:'+duedate
 
   return jiraIssue
 
@@ -349,8 +336,6 @@ def updateContent(contents, linkOption, fontsize, listItem):
   resolutions = soap.getResolutions(auth)
   statuses = soap.getStatuses(auth)
   priorities = soap.getPriorities(auth)
-  #customFields = soap.getCustomFields(auth)
-  #print customFields
 
   # get keys and queries
   keys = getKeyIssueListForJiraTag(contents)
@@ -359,7 +344,7 @@ def updateContent(contents, linkOption, fontsize, listItem):
   fieldsList = queriesWithFields[1]
   roots = getKeyIssueListForJiratreeTag(contents)
 
-  # insert key data
+  # insert key issue data
   for issuekey in keys:
     issue = soap.getIssue(auth, issuekey)
 
@@ -428,7 +413,7 @@ def updateContent(contents, linkOption, fontsize, listItem):
           priority = pri.name
       duedate = '-'
       if issue.duedate != None:
-        duedate = issue.duedate[0:3]
+        duedate = str(issue.duedate[0:3])
       resolution = 'UNRESOLVED'
       if issue.resolution != None:
         res = findId(resolutions, issue.resolution)
@@ -459,7 +444,7 @@ def updateContent(contents, linkOption, fontsize, listItem):
           elif fvalue.lower() == 'pri' or fvalue.lower() == 'priority':
             jiraIssueList = jiraIssueList + '<td>' + priority + '</td>'
           elif fvalue.lower() == 'duedate':
-            jiraIssueList = jiraIssueList + '<td>' + str(duedate) + '</td>'
+            jiraIssueList = jiraIssueList + '<td>' + duedate + '</td>'
           elif fvalue.lower() == 'prog' or fvalue.lower() == 'progress':
             jiraIssueList = jiraIssueList + '<td>' + progress + '</td>'
           elif fvalue.lower() == 'res' or fvalue.lower() == 'resolution':
@@ -468,7 +453,7 @@ def updateContent(contents, linkOption, fontsize, listItem):
             jiraIssueList = jiraIssueList + '<td>' + assignee.fullname + '</td>'
         jiraIssueList = jiraIssueList + '</tr>'
       else:
-        jiraIssueList = jiraIssueList + '<tr><td>'+no+'</td>'+keyColumn+'<td>'+wbs+'</td><td>'+summary+'</td><td>'+status+'</td><td>'+priority+'</td><td>'+str(duedate)+'</td><td>'+progress+'</td><td>'+resolution+'</td><td>'+assignee.fullname+'</td></tr>'
+        jiraIssueList = jiraIssueList + '<tr><td>'+no+'</td>'+keyColumn+'<td>'+wbs+'</td><td>'+summary+'</td><td>'+status+'</td><td>'+priority+'</td><td>'+duedate+'</td><td>'+progress+'</td><td>'+resolution+'</td><td>'+assignee.fullname+'</td></tr>'
 
     jiraIssueList = jiraIssueList + '</table>'
 
@@ -489,7 +474,7 @@ def updateContent(contents, linkOption, fontsize, listItem):
     contents = contents.replace(rootKey, tree)
 
   # remove tags
-  contents = re.sub(r'&lt;jira&gt;|&lt;/jira&gt;|&lt;jiralist&gt;|&lt;/jiralist&gt;|&lt;jiratree&gt;|&lt;/jiratree&gt;', '', contents)
+  contents = re.sub(r'&lt;jira&gt;|&lt;/jira&gt;|&lt;jiralist.*?&gt;|&lt;/jiralist&gt;|&lt;jiratree&gt;|&lt;/jiratree&gt;', '', contents)
 
   # change font size
   if fontsize != None:
@@ -510,8 +495,14 @@ def writeContent(content, file_name):
 
 ### upload document
 def uploadDoc(file, folderName):
-  fpath = file
+  fpath = os.path.abspath(file)
   upload(fpath, file, folderName)
+
+### delete file
+def delete(file):
+  fpath = os.path.abspath(file)
+  os.remove(fpath)
+  print 'File \'%s\' removed.' % fpath
 
 
 ### main ###
@@ -538,8 +529,8 @@ if file_name == None:
 
 # establish connection
 client = gdata.docs.client.DocsClient(source='fg-issue-v1')
-client.ssl = True  # Force all API requests through HTTPS
-client.http_client.debug = False  # Set to True for debugging HTTP requests
+client.ssl = True  # force to use HTTPS for all API requests
+client.http_client.debug = False  # option for HTTP requests debugging
 
 # read google email from file
 file = open('gmail','r')
@@ -553,23 +544,23 @@ file.close()
 
 client.ClientLogin(gmail, gpasswd, client.source, 'writely')
 '''
-feed = client.GetDocList(uri='/feeds/default/private/full/-/document')
-# get resource id by title (file name)
-acl_feed = client.GetAclPermissions(feed.entry[0].resource_id.text)
-# change acl_feed permission to reader ac.role.value = 'reader'
-# update updated_acl = client.Update(acl_entry)
-print feed.entry[0].resource_id.text, feed.entry[0].title.text
-for acl in acl_feed.entry:
-  print '%s (%s) is %s' % (acl.scope.value, acl.scope.type, acl.role.value)
-
-###createDoc('file-edit') ## not used
+#feed = client.GetDocList(uri='/feeds/default/private/full/-/document')
+## get resource id by title (file name)
+#acl_feed = client.GetAclPermissions(feed.entry[0].resource_id.text)
+## change acl_feed permission to reader ac.role.value = 'reader'
+## update updated_acl = client.Update(acl_entry)
+#print feed.entry[0].resource_id.text, feed.entry[0].title.text
+#for acl in acl_feed.entry:
+#  print '%s (%s) is %s' % (acl.scope.value, acl.scope.type, acl.role.value)
 '''
 file_ext = '.tmp'
 
 downloadDoc(file_name, file_ext)
 content = getContentsFromFile(file_name+file_ext)
 content = updateContent(content, linkOption, font_size, li)
+delete(file_name+file_ext) # remove temporary file
 
+# edit file name before upload
 file_name = file_name.replace('-edit','')
 if linkOption == True:
   file_name = file_name + '-link'
@@ -581,3 +572,4 @@ file_name = file_name + '-view'
 
 writeContent(content, file_name)
 uploadDoc(file_name, folder)
+delete(file_name) # clean up file
