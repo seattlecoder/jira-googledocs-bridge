@@ -87,13 +87,15 @@ def replaceHtmlEntity(str):
   lt = '&lt;'
   gt = '&gt;'
   whitespace = '&nbsp;'
-  dquote = '&rdquo;'
+  rdquote = '&rdquo;'
+  ldquote = '&ldquo;'
 
   # replace html entity
   str = str.replace(lt,'<')
   str = str.replace(gt,'>')
   str = str.replace(whitespace,'')
-  str = str.replace(dquote,'\"')
+  str = str.replace(ldquote,'\"')
+  str = str.replace(rdquote,'\"')
 
   return str
 
@@ -544,16 +546,7 @@ gpasswd = file.readline().strip()
 file.close()
 
 client.ClientLogin(gmail, gpasswd, client.source, 'writely')
-'''
-#feed = client.GetDocList(uri='/feeds/default/private/full/-/document')
-## get resource id by title (file name)
-#acl_feed = client.GetAclPermissions(feed.entry[0].resource_id.text)
-## change acl_feed permission to reader ac.role.value = 'reader'
-## update updated_acl = client.Update(acl_entry)
-#print feed.entry[0].resource_id.text, feed.entry[0].title.text
-#for acl in acl_feed.entry:
-#  print '%s (%s) is %s' % (acl.scope.value, acl.scope.type, acl.role.value)
-'''
+
 file_ext = '.tmp'
 
 downloadDoc(file_name, file_ext)
