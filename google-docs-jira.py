@@ -515,6 +515,7 @@ parser.add_argument('-d', '--directory', action='store', default='GoogleDocsJira
 parser.add_argument('-s', '--fontsize', action='store', dest='fontsize', type=int, help='set font size')
 parser.add_argument('-i', '--useli', action='store_true', default=False, dest='useli', help='use list items')
 
+# parse
 options = parser.parse_args()
 #print options
 linkOption = options.link
