@@ -41,10 +41,10 @@ def upload(path, file, folderName):
   print 'Document \'%s\' uploaded.' % path
 
 ### download
-## resourceid: google document id
+## documentId: google document id
 ## f_ext: file extension
-def download(resourceid, f_ext):
-  entry = client.GetDoc(resourceid)
+def download(documentId, f_ext):
+  entry = client.GetDoc(documentId)
 
   # download with tmp extension
   #client.Download(entry, file_path='%s' % os.path.abspath(entry.title.text)+f_ext)
@@ -54,10 +54,10 @@ def download(resourceid, f_ext):
 
   print 'Document \'%s\' downloaded as \'%s\'.' % (entry.title.text, entry.title.text+f_ext)
 
-### get resource id by given doc title
+### get document id by given doc title
 ## title: file name on the Google Docs server.
 ## this may need to be changed. e.g.> multiple files can have the same name.
-def getResourceId(title):
+def getDocumentId(title):
   feed = client.GetDocList()
   for entry in feed.entry:
     if entry.title.text.encode('UTF-8') == title and entry.GetDocumentType() == 'document':
@@ -66,12 +66,12 @@ def getResourceId(title):
 
 ### download document by title (file name)
 def downloadDoc(title, f_ext):
-  resourceId = getResourceId(title)
+  documentId = getDocumentId(title)
 
-  if resourceId == None:
+  if documentId == None:
     sys.exit('File \''+title+'\' does not exists.')
 
-  download(resourceId, f_ext)
+  download(documentId, f_ext)
 
 ### get content from html format
 def getContentsFromFile(fname):
@@ -506,6 +506,40 @@ def delete(file):
   os.remove(fpath)
   print 'File \'%s\' removed.' % fpath
 
+## delete document
+def deleteDoc(title):
+  documentId = getDocumentId(title)
+
+  if documentId == None:
+    sys.exit('No \''+title+'\' is found.')
+
+  entry = client.GetDoc(documentId)
+  rm_doc = entry.title.text
+  client.Delete(entry.GetEditLink().href + '?delete=true', force=True)
+
+  print 'Document \'' + rm_doc + '\' removed.'
+
+### copy document
+def copy(source, destination):
+  doc_id = getDocumentId(source)
+  doc_entry = client.GetDoc(doc_id)
+  copied_title = destination
+
+  print 'Copying \''+doc_entry.title.text + '\' to \'' + copied_title + '\''
+  client.Copy(doc_entry, copied_title)
+
+### move document to folder
+def move(source, dest_folder):
+  folder_entry = None
+  feed = client.GetDocList(uri='/feeds/default/private/full/-/folder')
+  for f in feed.entry:
+    if f.title.text == dest_folder:
+      dest_folder_entry = client.GetDoc(f.resource_id.text)
+
+  src_entry = client.GetDoc(getDocumentId(source))
+  print 'Moving \'' + src_entry.title.text + '\' to folder ' + dest_folder_entry.title.text
+  client.Move(src_entry, dest_folder_entry)
+
 
 ### main ###
 
@@ -562,8 +596,12 @@ if font_size != None:
   file_name = file_name + '-'+str(font_size)+'ft'
 if li == True:
   file_name = file_name + '-list'
-file_name = file_name + '-view'
 
 writeContent(content, file_name)
 uploadDoc(file_name, folder)
+# copy
+copy(file_name, file_name+'-view')
+# move
+move(file_name+'-view', 'GoogleDocsJiraView')
 delete(file_name) # clean up file
+deleteDoc(file_name)
