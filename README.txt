@@ -42,6 +42,5 @@ optional arguments:
 The script download a file as '<filename>.tmp' and replaces jira keys and 
 quries to the corresponding information (not directly in the downloaded file 
 but in memory). The updated contents are written to a file '<filename>[-link]
-[-<fontsize>][-list]-view.' The file is uploaded to the Google Docs folder.
-If the folder name is given, the file is uploaded to the folder. The default 
-folder is 'GoogleDocsJira.'
+[-<fontsize>][-list]-view.' The file is uploaded to the GoogleDocsJiraView 
+folder for 'read-only'.
