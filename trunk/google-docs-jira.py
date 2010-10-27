@@ -16,6 +16,7 @@ import re
 from xml.dom.minidom import parseString
 import argparse
 import os
+import json
 
 
 ### get folder uri
@@ -319,21 +320,11 @@ def makeTreeOutput(root, depth, indentChar, leaves, levels, priorities, info, so
   return output
 
 ### inject data
-def updateContents(contents, linkOption, fontsize, listItem):
+def updateContents(accountInfo, contents, linkOption, fontsize, listItem):
   # soap authentication
   soap = SOAPpy.WSDL.Proxy('http://jira.futuregrid.org/rpc/soap/jirasoapservice-v2?wsdl')
 
-  # read jira user name from file
-  file = open('jira-username','r')
-  jira_username = file.readline().strip()
-  file.close()
-
-  # read jira password from file
-  file = open('jira-passwd','r')
-  jira_passwd = file.readline().strip()
-  file.close()
-
-  auth = soap.login(jira_username, jira_passwd)
+  auth = soap.login(accountInfo['jira_usrname'], accountInfo['jira_passwd'])
   info = soap.getServerInfo(auth)
   resolutions = soap.getResolutions(auth)
   statuses = soap.getStatuses(auth)
@@ -540,6 +531,14 @@ def move(source, dest_folder):
   print 'Moving \'' + src_entry.title.text + '\' to folder ' + dest_folder_entry.title.text
   client.Move(src_entry, dest_folder_entry)
 
+### get google and jira account information from a file (json format)
+def getAccountInfo():
+  file = open('jirabridge','r')
+  jsonFormatData = file.read()
+  file.close()
+
+  return json.loads(jsonFormatData)
+
 
 ### main ###
 
@@ -569,23 +568,16 @@ client = gdata.docs.client.DocsClient(source='fg-issue-v1')
 client.ssl = True  # force to use HTTPS for all API requests
 client.http_client.debug = False  # option for HTTP requests debugging
 
-# read google email from file
-file = open('gmail','r')
-gmail = file.readline().strip()
-file.close()
+# read google and jira account information
+accountInfo = getAccountInfo()
 
-# read google password from file
-file = open('gpasswd','r')
-gpasswd = file.readline().strip()
-file.close()
-
-client.ClientLogin(gmail, gpasswd, client.source, 'writely')
+client.ClientLogin(accountInfo['gmail'], accountInfo['gpasswd'], client.source, 'writely')
 
 file_ext = '.tmp'
 
 downloadDoc(file_name, file_ext)
 content = getContentsFromFile(file_name+file_ext)
-content = updateContents(content, linkOption, font_size, li)
+content = updateContents(accountInfo, content, linkOption, font_size, li)
 delete(file_name+file_ext) # remove temporary file
 
 # edit file name before upload
