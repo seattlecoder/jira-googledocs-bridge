@@ -544,24 +544,26 @@ def getAccountInfo():
 
 # create parser
 parser = argparse.ArgumentParser()
+
 parser.add_argument('-l', '--link', action='store_true', default=False, dest='link', help='add a link to JIRA Key value')
-parser.add_argument('-f', '--filename', action='store', dest='filename', help='specify a file name to download')
-parser.add_argument('-d', '--directory', action='store', default='GoogleDocsJira', dest='folder', help='specify folder to upload a file')
-parser.add_argument('-s', '--fontsize', action='store', dest='fontsize', type=int, help='set font size')
-parser.add_argument('-i', '--useli', action='store_true', default=False, dest='useli', help='use list items')
+parser.add_argument('-d', '--document', action='store', dest='docname', required=True, help='specify a document name to download')
+parser.add_argument('-f', '--folder', action='store', dest='srcfolder', help='specify a folder to update all documents in it')
+parser.add_argument('-s', '--font-size', action='store', dest='fontsize', type=int, help='set font size')
+parser.add_argument('-ul', '--unordered-list', action='store_true', default=False, dest='useli', help='use unordered list in tree view')
+parser.add_argument('-t', '--to-folder', action='store', default='GoogleDocsJira', dest='destfolder', help='specify a folder to upload documents')
 
 # parse
 options = parser.parse_args()
 #print options
 linkOption = options.link
-file_name = options.filename
-folder = options.folder
+file_name = options.docname
+src_folder = options.srcfolder
+dest_folder = options.destfolder
 font_size = options.fontsize
 li = options.useli
 
-if file_name == None:
-  parser.print_help()
-  sys.exit('Please specify file name with option \'-f\'.')
+if (src_folder != None and file_name != None):
+  sys.exit('Error: option \'-d, --document\' and \'-f, --folder\' cannot be set together.')
 
 # establish connection
 client = gdata.docs.client.DocsClient(source='fg-issue-v1')
@@ -590,7 +592,7 @@ if li == True:
   file_name = file_name + '-list'
 
 writeContent(content, file_name)
-uploadDoc(file_name, folder)
+uploadDoc(file_name, dest_folder)
 # copy
 copy(file_name, file_name+'-view')
 # move
