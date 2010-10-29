@@ -30,18 +30,22 @@ You need to install a number of python modules if you have not.
 
 ## Usage:
 
-google-docs-jira.py [-h] [-l] [-f FILENAME] [-d FOLDER] [-s FONTSIZE] [-i]
+google-docs-jira.py [-h] [-l] -d DOCNAME [-f SRCFOLDER] [-s FONTSIZE] [-ul]
+               [-t DESTFOLDER]
 
 optional arguments:
   -h, --help            show this help message and exit
   -l, --link            add a link to JIRA Key value
-  -f FILENAME, --filename FILENAME
-                        specify a file name to download
-  -d FOLDER, --directory FOLDER
-                        specify folder to upload a file
-  -s FONTSIZE, --fontsize FONTSIZE
+  -d DOCNAME, --document DOCNAME
+                        specify a document name to download
+  -f SRCFOLDER, --folder SRCFOLDER
+                        specify a folder to update all documents in it
+  -s FONTSIZE, --font-size FONTSIZE
                         set font size
-  -i, --useli           use list items
+  -ul, --unordered-list
+                        use unordered list in tree view
+  -t DESTFOLDER, --to-folder DESTFOLDER
+                        specify a folder to upload documents
 
 The script download a file as '<filename>.tmp' and replaces jira keys and 
 quries to the corresponding information (not directly in the downloaded file 
