@@ -50,5 +50,4 @@ optional arguments:
 The script download a file as '<filename>.tmp' and replaces jira keys and 
 quries to the corresponding information (not directly in the downloaded file 
 but in memory). The updated contents are written to a file '<filename>[-link]
-[-<fontsize>][-list]-view.' The file is uploaded to the GoogleDocsJiraView 
-folder for 'read-only'.
+[-<fontsize>][-list]-view.' If the DESTFOLDER does not exist, it is created.

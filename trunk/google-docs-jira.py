@@ -521,11 +521,16 @@ def copy(source, destination):
 
 ### move document to folder
 def move(source, dest_folder):
-  folder_entry = None
+  dest_folder_entry = None
   feed = client.GetDocList(uri='/feeds/default/private/full/-/folder')
+
   for f in feed.entry:
     if f.title.text == dest_folder:
       dest_folder_entry = client.GetDoc(f.resource_id.text)
+
+  # create a folder if the destination folder does not exist
+  if dest_folder_entry == None and dest_folder != None:
+    dest_folder_entry = client.Create(gdata.docs.data.FOLDER_LABEL, dest_folder)
 
   src_entry = client.GetDoc(getDocumentId(source))
   print 'Moving \'' + src_entry.title.text + '\' to folder ' + dest_folder_entry.title.text
@@ -546,23 +551,23 @@ def getAccountInfo():
 parser = argparse.ArgumentParser()
 
 parser.add_argument('-l', '--link', action='store_true', default=False, dest='link', help='add a link to JIRA Key value')
-parser.add_argument('-d', '--document', action='store', dest='docname', required=True, help='specify a document name to download')
+parser.add_argument('-d', '--document', action='store', dest='docname', help='specify a document name to download')
 parser.add_argument('-f', '--folder', action='store', dest='srcfolder', help='specify a folder to update all documents in it')
 parser.add_argument('-s', '--font-size', action='store', dest='fontsize', type=int, help='set font size')
 parser.add_argument('-ul', '--unordered-list', action='store_true', default=False, dest='useli', help='use unordered list in tree view')
-parser.add_argument('-t', '--to-folder', action='store', default='GoogleDocsJira', dest='destfolder', help='specify a folder to upload documents')
+parser.add_argument('-t', '--to-folder', action='store', dest='destfolder', help='specify a folder to upload documents')
 
 # parse
 options = parser.parse_args()
 #print options
 linkOption = options.link
-file_name = options.docname
+doc_name = options.docname
 src_folder = options.srcfolder
 dest_folder = options.destfolder
 font_size = options.fontsize
 li = options.useli
 
-if (src_folder != None and file_name != None):
+if (src_folder != None and doc_name != None):
   sys.exit('Error: option \'-d, --document\' and \'-f, --folder\' cannot be set together.')
 
 # establish connection
@@ -575,27 +580,39 @@ accountInfo = getAccountInfo()
 
 client.ClientLogin(accountInfo['gmail'], accountInfo['gpasswd'], client.source, 'writely')
 
+# get list of documents to update
+docList = []
+if src_folder != None:
+  feed = client.GetDocList(uri='/feeds/default/private/full/-/folder')
+
+  for entry in feed.entry:
+    if entry.title.text == src_folder:
+      f = client.GetDocList(entry.content.src)
+      for doc in f.entry:
+        docList.append(doc.title.text)
+elif doc_name != None:
+  docList.append(doc_name)
+
 file_ext = '.tmp'
 
-downloadDoc(file_name, file_ext)
-content = getContentsFromFile(file_name+file_ext)
-content = updateContents(accountInfo, content, linkOption, font_size, li)
-delete(file_name+file_ext) # remove temporary file
+for document in docList:
+  downloadDoc(document, file_ext)
+  content = getContentsFromFile(document+file_ext)
+  content = updateContents(accountInfo, content, linkOption, font_size, li)
+  delete(document+file_ext) # remove temporary file
 
-# edit file name before upload
-file_name = file_name.replace('-edit','')
-if linkOption == True:
-  file_name = file_name + '-link'
-if font_size != None:
-  file_name = file_name + '-'+str(font_size)+'ft'
-if li == True:
-  file_name = file_name + '-list'
+  # edit document title before upload
+  document = document.replace('-edit','')
+  if linkOption == True:
+    document = document + '-link'
+  if font_size != None:
+    document = document + '-'+str(font_size)+'ft'
+  if li == True:
+    document = document + '-ul'
+  document = document + '-view'
 
-writeContent(content, file_name)
-uploadDoc(file_name, dest_folder)
-# copy
-copy(file_name, file_name+'-view')
-# move
-move(file_name+'-view', 'GoogleDocsJiraView')
-delete(file_name) # clean up file
-deleteDoc(file_name)
+  writeContent(content, document)
+  uploadDoc(document, dest_folder)
+  if dest_folder != None:
+    move(document, dest_folder)
+  delete(document) # clean up file
