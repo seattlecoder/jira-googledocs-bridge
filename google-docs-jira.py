@@ -609,10 +609,11 @@ for document in docList:
     document = document + '-'+str(font_size)+'ft'
   if li == True:
     document = document + '-ul'
-  document = document + '-view'
 
   writeContent(content, document)
   uploadDoc(document, dest_folder)
+  copy(document, document+'-view') # this changes sharing permission to 'not shared.'
   if dest_folder != None:
-    move(document, dest_folder)
+    move(document+'-view', dest_folder)
   delete(document) # clean up file
+  deleteDoc(document)
